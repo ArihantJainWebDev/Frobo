@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import { getDefaultExample } from '@/lib/examples';
 
 // Dynamically import components to avoid SSR issues
 const Editor = dynamic(() => import('@/components/Editor'), { ssr: false });
@@ -10,10 +11,7 @@ const Toolbar = dynamic(() => import('@/components/Toolbar'), { ssr: false });
 const ErrorPanel = dynamic(() => import('@/components/ErrorPanel'), { ssr: false });
 
 export default function Home() {
-  const [code, setCode] = useState(`component Hello {
-  text "Hello World"
-  button "Click Me"
-}`);
+  const [code, setCode] = useState('');
   
   const [compiledOutput, setCompiledOutput] = useState<{
     html: string;
@@ -23,6 +21,12 @@ export default function Home() {
   
   const [errors, setErrors] = useState<string[]>([]);
   const [isCompiling, setIsCompiling] = useState(false);
+
+  // Load default example on mount
+  useEffect(() => {
+    const defaultExample = getDefaultExample();
+    setCode(defaultExample.code);
+  }, []);
 
   const handleRun = async () => {
     console.log('🚀 Starting compilation...');
@@ -55,10 +59,20 @@ export default function Home() {
     }
   };
 
+  const handleLoadExample = (exampleCode: string) => {
+    setCode(exampleCode);
+    setCompiledOutput(null);
+    setErrors([]);
+  };
+
   return (
     <div className="h-screen flex flex-col bg-gray-900">
       {/* Toolbar */}
-      <Toolbar onRun={handleRun} isCompiling={isCompiling} />
+      <Toolbar 
+        onRun={handleRun} 
+        isCompiling={isCompiling}
+        onLoadExample={handleLoadExample}
+      />
       
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
