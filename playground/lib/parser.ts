@@ -7,6 +7,7 @@ export enum NodeType {
     FUNCTION,
     STATE_DECLARATION,
     IF_STATEMENT,
+    FOR_LOOP,
     CONDITION,
     IDENTIFIER,
     STRING_LITERAL,
@@ -22,6 +23,9 @@ export interface ASTNode {
     condition?: ASTNode;
     consequent?: ASTNode[];
     alternate?: ASTNode[];
+    itemName?: string;
+    arrayName?: string;
+    body?: ASTNode[];
 }
 
 export class Parser {
@@ -116,6 +120,8 @@ export class Parser {
                 children.push(this.parseState());
             } else if(this.current().type === TokenType.KEYWORD && this.current().value === 'if') {
                 children.push(this.parseIfStatement());
+            } else if(this.current().type === TokenType.KEYWORD && this.current().value === 'for') {
+                children.push(this.parseForLoop());
             } else {
                 children.push(this.parseElement());
             }
@@ -148,8 +154,11 @@ export class Parser {
         } else if(this.current().type === TokenType.STRING) {
             value = this.current().value;
             this.advance();
+        } else if(this.current().type === TokenType.BRACKET_OPEN) {
+            // Parse array literal
+            value = this.parseArrayLiteral();
         } else {
-            throw new Error(`Expected number or string for state value at line ${this.current().line}`);
+            throw new Error(`Expected number, string, or array for state value at line ${this.current().line}`);
         }
 
         return {
@@ -317,6 +326,74 @@ export class Parser {
             type: NodeType.CONDITION,
             value: operator,
             children: [left, right]
+        };
+    }
+
+    private parseArrayLiteral(): any[] {
+        this.expect(TokenType.BRACKET_OPEN);
+
+        const items: any[] = [];
+
+        while(this.current().type !== TokenType.BRACKET_CLOSE) {
+            if(this.current().type === TokenType.STRING) {
+                items.push(this.current().value);
+                this.advance();
+            } else if(this.current().type === TokenType.NUMBER) {
+                items.push(parseFloat(this.current().value));
+                this.advance();
+            } else {
+                throw new Error(`Expected string or number in array at line ${this.current().line}`);
+            }
+
+            // Handle comma
+            if(this.current().type === TokenType.COMMA) {
+                this.advance();
+            }
+        }
+
+        this.expect(TokenType.BRACKET_CLOSE);
+
+        return items;
+    }
+
+    private parseForLoop(): ASTNode {
+        this.expect(TokenType.KEYWORD); // 'for'
+
+        // Parse item name
+        const itemToken = this.expect(TokenType.IDENTIFIER);
+
+        // Expect 'in'
+        if(this.current().type !== TokenType.KEYWORD || this.current().value !== 'in') {
+            throw new Error(`Expected 'in' keyword at line ${this.current().line}`);
+        }
+        this.advance();
+
+        // Parse array name
+        const arrayToken = this.expect(TokenType.IDENTIFIER);
+
+        this.expect(TokenType.BRACE_OPEN);
+
+        while(this.current().type === TokenType.NEWLINE) {
+            this.advance();
+        }
+
+        // Parse loop body
+        const body: ASTNode[] = [];
+        while(this.current().type !== TokenType.BRACE_CLOSE) {
+            body.push(this.parseElement());
+
+            while(this.current().type === TokenType.NEWLINE) {
+                this.advance();
+            }
+        }
+
+        this.expect(TokenType.BRACE_CLOSE);
+
+        return {
+            type: NodeType.FOR_LOOP,
+            itemName: itemToken.value,
+            arrayName: arrayToken.value,
+            body
         };
     }
 

@@ -14,6 +14,8 @@ export enum TokenType {
     NOT_EQUAL,
     BRACE_OPEN,
     BRACE_CLOSE,
+    BRACKET_OPEN,
+    BRACKET_CLOSE,
     PAREN_OPEN,
     PAREN_CLOSE,
     COMMA,
@@ -89,6 +91,8 @@ export class Lexer {
         switch(char){
             case '{': return this.makeToken(TokenType.BRACE_OPEN, '{');
             case '}': return this.makeToken(TokenType.BRACE_CLOSE, '}');
+            case '[': return this.makeToken(TokenType.BRACKET_OPEN, '[');
+            case ']': return this.makeToken(TokenType.BRACKET_CLOSE, ']');
             case '(': return this.makeToken(TokenType.PAREN_OPEN, '(');
             case ')': return this.makeToken(TokenType.PAREN_CLOSE, ')');
             case ',': return this.makeToken(TokenType.COMMA, ',');

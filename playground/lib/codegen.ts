@@ -36,6 +36,9 @@ export class CodeGenerator {
       case NodeType.IF_STATEMENT:
         return this.generateIfStatement(node);
 
+      case NodeType.FOR_LOOP:
+        return this.generateForLoop(node);
+
       default:
         return "";
     }
@@ -119,6 +122,54 @@ export class CodeGenerator {
     }
 
     return html;
+  }
+
+  private generateForLoop(node: ASTNode): string {
+    if (!node.itemName || !node.arrayName || !node.body) return "";
+
+    // Generate unique ID for this loop
+    const loopId = `loop-${Math.random().toString(36).substr(2, 9)}`;
+
+    // Create a container that will hold the loop items
+    let html = `<div id="${loopId}" data-loop="${node.arrayName}" data-item="${node.itemName}">`;
+    html += `<!-- Loop items will be rendered here -->`;
+    html += '</div>';
+
+    // Store the template for this loop
+    html += `<template id="${loopId}-template">`;
+    html += node.body.map(child => this.generateLoopItemHTML(child, node.itemName!)).join('\n');
+    html += '</template>';
+
+    return html;
+  }
+
+  private generateLoopItemHTML(node: ASTNode, itemName: string): string {
+    if (node.type === NodeType.ELEMENT) {
+      const name = node.name || "div";
+      let value = node.value || "";
+      
+      // Replace {item} with placeholder for loop item
+      value = value.replace(new RegExp(`\\{${itemName}\\}`, 'g'), `{{LOOP_ITEM}}`);
+
+      const onClick = node.attributes?.onClick;
+
+      switch (name) {
+        case "text":
+          return `<p class="loop-item">${this.escapeHTML(value)}</p>`;
+        case "heading":
+          return `<h1 class="loop-item">${this.escapeHTML(value)}</h1>`;
+        case "button":
+          const onclickAttr = onClick ? ` onclick="${onClick}()"` : "";
+          return `<button class="loop-item"${onclickAttr}>${this.escapeHTML(value)}</button>`;
+        case "input":
+          return `<input class="loop-item" type="text" placeholder="${this.escapeHTML(value)}" />`;
+        case "container":
+          return `<div class="loop-item">${this.escapeHTML(value)}</div>`;
+        default:
+          return `<div class="loop-item">${this.escapeHTML(value)}</div>`;
+      }
+    }
+    return "";
   }
 
   private generateConditionString(condition: ASTNode): string {
@@ -267,6 +318,11 @@ export class CodeGenerator {
     if (this.conditionals) {
       this.conditionals.forEach(evaluate => evaluate());
     }
+    
+    // Re-render loops
+    if (this.renderLoops) {
+      this.renderLoops();
+    }
   },
   
   bind(elementId, stateKey, property = 'textContent') {
@@ -311,10 +367,14 @@ export class CodeGenerator {
 
           const stateObj = states
             .map((state) => {
-              const initialValue =
-                typeof state.value === "string"
-                  ? `"${state.value}"`
-                  : state.value;
+              let initialValue;
+              if (typeof state.value === "string") {
+                initialValue = `"${state.value}"`;
+              } else if (Array.isArray(state.value)) {
+                initialValue = JSON.stringify(state.value);
+              } else {
+                initialValue = state.value;
+              }
               return `${state.name}: ${initialValue}`;
             })
             .join(", ");
@@ -356,6 +416,36 @@ export class CodeGenerator {
           js += `  };\n`;
           js += `  \n`;
           js += `  Frobo.setupConditionals();\n`;
+          js += `  \n`;
+          
+          // Add loop rendering setup
+          js += `  // Setup loop rendering\n`;
+          js += `  Frobo.renderLoops = function() {\n`;
+          js += `    document.querySelectorAll('[data-loop]').forEach(container => {\n`;
+          js += `      const arrayName = container.getAttribute('data-loop');\n`;
+          js += `      const itemName = container.getAttribute('data-item');\n`;
+          js += `      const templateId = container.id + '-template';\n`;
+          js += `      const template = document.getElementById(templateId);\n`;
+          js += `      \n`;
+          js += `      if (!template || !state[arrayName]) return;\n`;
+          js += `      \n`;
+          js += `      container.innerHTML = '';\n`;
+          js += `      const array = state[arrayName];\n`;
+          js += `      \n`;
+          js += `      if (Array.isArray(array)) {\n`;
+          js += `        array.forEach((item, index) => {\n`;
+          js += `          const clone = template.content.cloneNode(true);\n`;
+          js += `          const div = document.createElement('div');\n`;
+          js += `          div.appendChild(clone);\n`;
+          js += `          let html = div.innerHTML;\n`;
+          js += `          html = html.replace(/\\{\\{LOOP_ITEM\\}\\}/g, item);\n`;
+          js += `          container.innerHTML += html;\n`;
+          js += `        });\n`;
+          js += `      }\n`;
+          js += `    });\n`;
+          js += `  };\n`;
+          js += `  \n`;
+          js += `  Frobo.renderLoops();\n`;
           
           js += `});\n\n`;
         }
