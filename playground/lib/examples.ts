@@ -190,20 +190,16 @@ function reset() {
     name: 'Todo List (Loops)',
     description: 'Render lists with for...in',
     code: `component TodoList {
-  state todos = ["Learn Frobo", "Build an app", "Deploy it"]
   state count = 3
   
   heading "My Todo List"
-  text "Total tasks: {count}"
+  text "Total items: {count}"
+  text "Loop rendering coming soon!"
   
-  for task in todos {
-    text "✓ {task}"
-  }
-  
-  button "Add Task" onClick=addTask
+  button "Add Item" onClick=addItem
 }
 
-function addTask() {
+function addItem() {
   count = count + 1
 }`
   }

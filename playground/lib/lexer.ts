@@ -6,6 +6,8 @@ export enum TokenType {
     EQUALS,
     PLUS,
     MINUS,
+    MULTIPLY,
+    DIVIDE,
     GREATER_THAN,
     LESS_THAN,
     GREATER_EQUAL,
@@ -98,6 +100,8 @@ export class Lexer {
             case ',': return this.makeToken(TokenType.COMMA, ',');
             case '+': return this.makeToken(TokenType.PLUS, '+');
             case '-': return this.makeToken(TokenType.MINUS, '-');
+            case '*': return this.makeToken(TokenType.MULTIPLY, '*');
+            case '/': return this.makeToken(TokenType.DIVIDE, '/');
             case '.': return this.makeToken(TokenType.DOT, '.');
             case '=':
                 if (this.peek() === '=') {

@@ -89,7 +89,12 @@ export class Parser {
                 body.push(';\n');
                 this.advance();
             } else {
-                body.push(this.current().value);
+                // Preserve quotes for string literals
+                if(this.current().type === TokenType.STRING) {
+                    body.push(`"${this.current().value}"`);
+                } else {
+                    body.push(this.current().value);
+                }
                 this.advance();
             }
         }
@@ -147,6 +152,11 @@ export class Parser {
 
         this.expect(TokenType.EQUALS);
 
+        // Skip any whitespace/newlines after equals
+        while(this.current().type === TokenType.NEWLINE) {
+            this.advance();
+        }
+
         let value: any;
         if(this.current().type === TokenType.NUMBER) {
             value = parseFloat(this.current().value);
@@ -158,7 +168,7 @@ export class Parser {
             // Parse array literal
             value = this.parseArrayLiteral();
         } else {
-            throw new Error(`Expected number, string, or array for state value at line ${this.current().line}`);
+            throw new Error(`Expected number, string, or array for state value at line ${this.current().line}. Got: ${TokenType[this.current().type]} with value: "${this.current().value}"`);
         }
 
         return {
@@ -332,7 +342,7 @@ export class Parser {
     private parseArrayLiteral(): any[] {
         this.expect(TokenType.BRACKET_OPEN);
 
-        const items: any[] = [];
+        const items: unknown[] = [];
 
         // Skip any newlines after opening bracket
         while(this.current().type === TokenType.NEWLINE) {
@@ -340,7 +350,6 @@ export class Parser {
         }
 
         while(this.current().type !== TokenType.BRACKET_CLOSE) {
-            // Skip newlines before each item
             while(this.current().type === TokenType.NEWLINE) {
                 this.advance();
             }
