@@ -128,8 +128,9 @@ export class CodeGenerator {
     const right = condition.children[1];
     const operator = condition.value;
 
-    const leftValue = left.type === NodeType.IDENTIFIER ? left.value : left.value;
-    const rightValue = right.type === NodeType.IDENTIFIER ? right.value : right.value;
+    // If it's an identifier (variable), prefix with 'state.'
+    const leftValue = left.type === NodeType.IDENTIFIER ? `state.${left.value}` : left.value;
+    const rightValue = right.type === NodeType.IDENTIFIER ? `state.${right.value}` : right.value;
 
     return `${leftValue}${operator}${rightValue}`;
   }
