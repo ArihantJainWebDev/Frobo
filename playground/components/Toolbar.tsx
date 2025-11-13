@@ -7,9 +7,10 @@ interface ToolbarProps {
   onRun: () => void;
   isCompiling: boolean;
   onLoadExample: (code: string) => void;
+  onExport: () => void;
 }
 
-export default function Toolbar({ onRun, isCompiling, onLoadExample }: ToolbarProps) {
+export default function Toolbar({ onRun, isCompiling, onLoadExample, onExport }: ToolbarProps) {
   const [showExamples, setShowExamples] = useState(false);
 
   const handleExampleClick = (example: Example) => {
@@ -52,6 +53,13 @@ export default function Toolbar({ onRun, isCompiling, onLoadExample }: ToolbarPr
           </div>
         )}
       </div>
+
+      <button
+        onClick={onExport}
+        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md font-medium transition-colors"
+      >
+        Export HTML
+      </button>
       
       <div className="flex-1" />
       

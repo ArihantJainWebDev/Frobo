@@ -65,6 +65,50 @@ export default function Home() {
     setErrors([]);
   };
 
+  const handleExport = () => {
+    if (!compiledOutput) {
+      alert('Please run your code first before exporting!');
+      return;
+    }
+
+    // Create standalone HTML file
+    const htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Frobo App</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    ${compiledOutput.css}
+  </style>
+</head>
+<body>
+  ${compiledOutput.html}
+  
+  <script>
+    ${compiledOutput.js}
+  </script>
+</body>
+</html>`;
+
+    // Create blob and download
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'frobo-app.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="h-screen flex flex-col bg-gray-900">
       {/* Toolbar */}
@@ -72,6 +116,7 @@ export default function Home() {
         onRun={handleRun} 
         isCompiling={isCompiling}
         onLoadExample={handleLoadExample}
+        onExport={handleExport}
       />
       
       {/* Main Content */}
