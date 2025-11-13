@@ -6,6 +6,8 @@ export enum NodeType {
     ELEMENT,
     FUNCTION,
     STATE_DECLARATION,
+    IF_STATEMENT,
+    CONDITION,
     IDENTIFIER,
     STRING_LITERAL,
     NUMBER_LITERAL
@@ -17,6 +19,9 @@ export interface ASTNode {
     name?: string;
     children?: ASTNode[];
     attributes?: Record<string, any>;
+    condition?: ASTNode;
+    consequent?: ASTNode[];
+    alternate?: ASTNode[];
 }
 
 export class Parser {
@@ -109,6 +114,8 @@ export class Parser {
         while(this.current().type !== TokenType.BRACE_CLOSE) {
             if(this.current().type === TokenType.KEYWORD && this.current().value === 'state') {
                 children.push(this.parseState());
+            } else if(this.current().type === TokenType.KEYWORD && this.current().value === 'if') {
+                children.push(this.parseIfStatement());
             } else {
                 children.push(this.parseElement());
             }
@@ -200,6 +207,117 @@ export class Parser {
     
     private peek(): Token { 
         return this.tokens[this.position + 1];
+    }
+
+    private parseIfStatement(): ASTNode {
+        this.expect(TokenType.KEYWORD); // 'if'
+
+        // Parse condition
+        const condition = this.parseCondition();
+
+        this.expect(TokenType.BRACE_OPEN);
+
+        while(this.current().type === TokenType.NEWLINE) {
+            this.advance();
+        }
+
+        // Parse consequent (if body)
+        const consequent: ASTNode[] = [];
+        while(this.current().type !== TokenType.BRACE_CLOSE) {
+            consequent.push(this.parseElement());
+
+            while(this.current().type === TokenType.NEWLINE) {
+                this.advance();
+            }
+        }
+
+        this.expect(TokenType.BRACE_CLOSE);
+
+        while(this.current().type === TokenType.NEWLINE) {
+            this.advance();
+        }
+
+        // Check for else
+        let alternate: ASTNode[] | undefined;
+        if(this.current().type === TokenType.KEYWORD && this.current().value === 'else') {
+            this.advance(); // consume 'else'
+
+            this.expect(TokenType.BRACE_OPEN);
+
+            while(this.current().type === TokenType.NEWLINE) {
+                this.advance();
+            }
+
+            alternate = [];
+            while(this.current().type !== TokenType.BRACE_CLOSE) {
+                alternate.push(this.parseElement());
+
+                while(this.current().type === TokenType.NEWLINE) {
+                    this.advance();
+                }
+            }
+
+            this.expect(TokenType.BRACE_CLOSE);
+        }
+
+        return {
+            type: NodeType.IF_STATEMENT,
+            condition,
+            consequent,
+            alternate
+        };
+    }
+
+    private parseCondition(): ASTNode {
+        // Parse left side (identifier or number)
+        let left: ASTNode;
+        if(this.current().type === TokenType.IDENTIFIER) {
+            left = {
+                type: NodeType.IDENTIFIER,
+                value: this.current().value
+            };
+            this.advance();
+        } else if(this.current().type === TokenType.NUMBER) {
+            left = {
+                type: NodeType.NUMBER_LITERAL,
+                value: parseFloat(this.current().value)
+            };
+            this.advance();
+        } else {
+            throw new Error(`Expected identifier or number in condition at line ${this.current().line}`);
+        }
+
+        // Parse operator
+        const operator = this.current().value;
+        if(![TokenType.GREATER_THAN, TokenType.LESS_THAN, TokenType.GREATER_EQUAL, 
+             TokenType.LESS_EQUAL, TokenType.EQUAL_EQUAL, TokenType.NOT_EQUAL].includes(this.current().type)) {
+            throw new Error(`Expected comparison operator at line ${this.current().line}`);
+        }
+        this.advance();
+
+        // Parse right side
+        let right: ASTNode;
+        if(this.current().type === TokenType.IDENTIFIER) {
+            right = {
+                type: NodeType.IDENTIFIER,
+                value: this.current().value
+            };
+            this.advance();
+        } else if(this.current().type === TokenType.NUMBER) {
+            right = {
+                type: NodeType.NUMBER_LITERAL,
+                value: parseFloat(this.current().value)
+            };
+            this.advance();
+        } else {
+            throw new Error(`Expected identifier or number in condition at line ${this.current().line}`);
+        }
+
+        return {
+            type: NodeType.CONDITION,
+            value: operator,
+            children: [left, right]
+        };
     }
 
     private expect(type: TokenType): Token { 

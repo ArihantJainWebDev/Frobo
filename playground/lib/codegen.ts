@@ -33,6 +33,9 @@ export class CodeGenerator {
       case NodeType.ELEMENT:
         return this.generateElement(node);
 
+      case NodeType.IF_STATEMENT:
+        return this.generateIfStatement(node);
+
       default:
         return "";
     }
@@ -95,6 +98,40 @@ export class CodeGenerator {
       default:
         return `<div>${this.escapeHTML(value)}</div>`;
     }
+  }
+
+  private generateIfStatement(node: ASTNode): string {
+    if (!node.condition || !node.consequent) return "";
+
+    // Generate unique ID for this conditional block
+    const conditionId = `cond-${Math.random().toString(36).substr(2, 9)}`;
+
+    // Generate HTML for consequent (if body)
+    let html = `<div id="${conditionId}-if" data-condition="${this.generateConditionString(node.condition)}" style="display: none;">`;
+    html += node.consequent.map(child => this.generateHTML(child)).join('\n');
+    html += '</div>';
+
+    // Generate HTML for alternate (else body) if it exists
+    if (node.alternate && node.alternate.length > 0) {
+      html += `<div id="${conditionId}-else" style="display: none;">`;
+      html += node.alternate.map(child => this.generateHTML(child)).join('\n');
+      html += '</div>';
+    }
+
+    return html;
+  }
+
+  private generateConditionString(condition: ASTNode): string {
+    if (!condition.children || condition.children.length !== 2) return "";
+
+    const left = condition.children[0];
+    const right = condition.children[1];
+    const operator = condition.value;
+
+    const leftValue = left.type === NodeType.IDENTIFIER ? left.value : left.value;
+    const rightValue = right.type === NodeType.IDENTIFIER ? right.value : right.value;
+
+    return `${leftValue}${operator}${rightValue}`;
   }
 
   private generateCSS(): string {
@@ -224,6 +261,11 @@ export class CodeGenerator {
           }
         }
       });
+    
+    // Re-evaluate conditionals
+    if (this.conditionals) {
+      this.conditionals.forEach(evaluate => evaluate());
+    }
   },
   
   bind(elementId, stateKey, property = 'textContent') {
@@ -288,6 +330,32 @@ export class CodeGenerator {
             js += `  const elem_${state.name} = document.getElementById('text-${state.name}');\n`;
             js += `  if (elem_${state.name}) Frobo.watch('${state.name}', elem_${state.name});\n`;
           });
+          
+          // Add conditional rendering setup
+          js += `\n  // Setup conditional rendering\n`;
+          js += `  Frobo.setupConditionals = function() {\n`;
+          js += `    document.querySelectorAll('[data-condition]').forEach(el => {\n`;
+          js += `      const condition = el.getAttribute('data-condition');\n`;
+          js += `      const condId = el.id.replace('-if', '');\n`;
+          js += `      const ifBlock = document.getElementById(condId + '-if');\n`;
+          js += `      const elseBlock = document.getElementById(condId + '-else');\n`;
+          js += `      \n`;
+          js += `      const evaluate = () => {\n`;
+          js += `        try {\n`;
+          js += `          const result = eval(condition);\n`;
+          js += `          if (ifBlock) ifBlock.style.display = result ? 'block' : 'none';\n`;
+          js += `          if (elseBlock) elseBlock.style.display = result ? 'none' : 'block';\n`;
+          js += `        } catch(e) { console.error('Condition error:', e); }\n`;
+          js += `      };\n`;
+          js += `      \n`;
+          js += `      evaluate();\n`;
+          js += `      Frobo.conditionals = Frobo.conditionals || [];\n`;
+          js += `      Frobo.conditionals.push(evaluate);\n`;
+          js += `    });\n`;
+          js += `  };\n`;
+          js += `  \n`;
+          js += `  Frobo.setupConditionals();\n`;
+          
           js += `});\n\n`;
         }
       }

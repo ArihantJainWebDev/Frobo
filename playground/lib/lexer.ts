@@ -6,6 +6,12 @@ export enum TokenType {
     EQUALS,
     PLUS,
     MINUS,
+    GREATER_THAN,
+    LESS_THAN,
+    GREATER_EQUAL,
+    LESS_EQUAL,
+    EQUAL_EQUAL,
+    NOT_EQUAL,
     BRACE_OPEN,
     BRACE_CLOSE,
     PAREN_OPEN,
@@ -85,11 +91,34 @@ export class Lexer {
             case '}': return this.makeToken(TokenType.BRACE_CLOSE, '}');
             case '(': return this.makeToken(TokenType.PAREN_OPEN, '(');
             case ')': return this.makeToken(TokenType.PAREN_CLOSE, ')');
-            case '=': return this.makeToken(TokenType.EQUALS, '=');
             case ',': return this.makeToken(TokenType.COMMA, ',');
             case '+': return this.makeToken(TokenType.PLUS, '+');
             case '-': return this.makeToken(TokenType.MINUS, '-');
             case '.': return this.makeToken(TokenType.DOT, '.');
+            case '=':
+                if (this.peek() === '=') {
+                    this.advance();
+                    return this.makeToken(TokenType.EQUAL_EQUAL, '==');
+                }
+                return this.makeToken(TokenType.EQUALS, '=');
+            case '>':
+                if (this.peek() === '=') {
+                    this.advance();
+                    return this.makeToken(TokenType.GREATER_EQUAL, '>=');
+                }
+                return this.makeToken(TokenType.GREATER_THAN, '>');
+            case '<':
+                if (this.peek() === '=') {
+                    this.advance();
+                    return this.makeToken(TokenType.LESS_EQUAL, '<=');
+                }
+                return this.makeToken(TokenType.LESS_THAN, '<');
+            case '!':
+                if (this.peek() === '=') {
+                    this.advance();
+                    return this.makeToken(TokenType.NOT_EQUAL, '!=');
+                }
+                break;
         }
 
         throw new Error(`Unexpected character '${char} at line ${this.line}, column ${this.column}`);

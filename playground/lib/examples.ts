@@ -147,6 +147,43 @@ function reset() {
   score = 0
   level = 1
 }`
+  },
+  {
+    id: 'conditional',
+    name: 'Conditional Rendering',
+    description: 'Show/hide elements based on state',
+    code: `component ConditionalDemo {
+  state count = 0
+  
+  heading "Conditional Rendering"
+  text "Count: {count}"
+  
+  if count > 5 {
+    text "Count is greater than 5!"
+  }
+  
+  if count < 5 {
+    text "Count is less than 5"
+  } else {
+    text "Count is 5 or more"
+  }
+  
+  button "Increment" onClick=increment
+  button "Decrement" onClick=decrement
+  button "Reset" onClick=reset
+}
+
+function increment() {
+  count = count + 1
+}
+
+function decrement() {
+  count = count - 1
+}
+
+function reset() {
+  count = 0
+}`
   }
 ];
 
