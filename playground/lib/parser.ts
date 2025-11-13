@@ -334,7 +334,21 @@ export class Parser {
 
         const items: any[] = [];
 
+        // Skip any newlines after opening bracket
+        while(this.current().type === TokenType.NEWLINE) {
+            this.advance();
+        }
+
         while(this.current().type !== TokenType.BRACKET_CLOSE) {
+            // Skip newlines before each item
+            while(this.current().type === TokenType.NEWLINE) {
+                this.advance();
+            }
+
+            if(this.current().type === TokenType.BRACKET_CLOSE) {
+                break;
+            }
+
             if(this.current().type === TokenType.STRING) {
                 items.push(this.current().value);
                 this.advance();
@@ -345,9 +359,18 @@ export class Parser {
                 throw new Error(`Expected string or number in array at line ${this.current().line}`);
             }
 
+            // Skip newlines after item
+            while(this.current().type === TokenType.NEWLINE) {
+                this.advance();
+            }
+
             // Handle comma
             if(this.current().type === TokenType.COMMA) {
                 this.advance();
+                // Skip newlines after comma
+                while(this.current().type === TokenType.NEWLINE) {
+                    this.advance();
+                }
             }
         }
 
