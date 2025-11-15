@@ -273,12 +273,40 @@ export class Parser {
             }
         }
 
+        // Check for nested children (opening brace after attributes)
+        let children: ASTNode[] | undefined;
+        if(this.current().type === TokenType.BRACE_OPEN) {
+            this.advance(); // consume '{'
+            
+            while(this.current().type === TokenType.NEWLINE) {
+                this.advance();
+            }
+            
+            children = [];
+            while(this.current().type !== TokenType.BRACE_CLOSE) {
+                if(this.current().type === TokenType.KEYWORD && this.current().value === 'if') {
+                    children.push(this.parseIfStatement());
+                } else if(this.current().type === TokenType.KEYWORD && this.current().value === 'for') {
+                    children.push(this.parseForLoop());
+                } else {
+                    children.push(this.parseElement());
+                }
+                
+                while(this.current().type === TokenType.NEWLINE) {
+                    this.advance();
+                }
+            }
+            
+            this.expect(TokenType.BRACE_CLOSE);
+        }
+
         return {
             type: isComponentInstance ? NodeType.COMPONENT_INSTANCE : NodeType.ELEMENT,
             name: elementName,
             value: value,
             attributes: Object.keys(attributes).length > 0 ? attributes : undefined,
-            styles: Object.keys(styles).length > 0 ? styles : undefined
+            styles: Object.keys(styles).length > 0 ? styles : undefined,
+            children: children
         } as ASTNode;
     }
     

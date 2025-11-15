@@ -234,6 +234,30 @@ component App {
   Card title="Hello" message="Props make components flexible"
   Card title="Awesome" message="Build once, use everywhere!"
 }`
+  },
+  {
+    id: 'nested-elements',
+    name: 'Nested Elements',
+    description: 'Build complex layouts with nesting',
+    code: `component NestedDemo {
+  heading "Nested Elements Demo"
+  
+  container style={ background: "#f8fafc", padding: "20", borderRadius: "12" } {
+    heading "Card Title" style={ fontSize: "24", color: "#1e293b" }
+    text "This is inside a container!" style={ color: "#64748b" }
+    
+    container style={ background: "#e2e8f0", padding: "16", borderRadius: "8" } {
+      text "Nested even deeper!" style={ color: "#475569" }
+      button "Click Me" bg="#3b82f6" color="white"
+    }
+  }
+  
+  container style={ background: "#dbeafe", padding: "20", borderRadius: "12" } {
+    heading "Another Section" style={ color: "#1e40af" }
+    text "Containers can hold multiple elements"
+    text "And they can be styled independently"
+  }
+}`
   }
 ];
 

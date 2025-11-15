@@ -84,6 +84,16 @@ export class CodeGenerator {
     const value = node.value || "";
     const onClick = node.attributes?.onClick;
     const styleAttr = node.styles ? ` style="${this.generateInlineStyles(node.styles)}"` : "";
+    
+    // Handle nested children
+    let childrenHTML = "";
+    if (node.children && node.children.length > 0) {
+      this.indentLevel++;
+      childrenHTML = "\n" + node.children
+        .map((child) => this.indent() + this.generateHTML(child))
+        .join("\n") + "\n" + this.indent().slice(2);
+      this.indentLevel--;
+    }
 
     switch (name) {
       case "text":
@@ -96,23 +106,23 @@ export class CodeGenerator {
             )}"${styleAttr}>${this.escapeHTML(value.replace(/\{(\w+)\}/, "0"))}</p>`;
           }
         }
-        return `<p${styleAttr}>${this.escapeHTML(value)}</p>`;
+        return `<p${styleAttr}>${this.escapeHTML(value)}${childrenHTML}</p>`;
 
       case "heading":
-        return `<h1${styleAttr}>${this.escapeHTML(value)}</h1>`;
+        return `<h1${styleAttr}>${this.escapeHTML(value)}${childrenHTML}</h1>`;
 
       case "button":
         const onclickAttr = onClick ? ` onclick="${onClick}()"` : "";
-        return `<button${onclickAttr}${styleAttr}>${this.escapeHTML(value)}</button>`;
+        return `<button${onclickAttr}${styleAttr}>${this.escapeHTML(value)}${childrenHTML}</button>`;
 
       case "input":
         return `<input type="text" placeholder="${this.escapeHTML(value)}"${styleAttr} />`;
 
       case "container":
-        return `<div${styleAttr}>${this.escapeHTML(value)}</div>`;
+        return `<div${styleAttr}>${this.escapeHTML(value)}${childrenHTML}</div>`;
 
       default:
-        return `<div${styleAttr}>${this.escapeHTML(value)}</div>`;
+        return `<div${styleAttr}>${this.escapeHTML(value)}${childrenHTML}</div>`;
     }
   }
   
