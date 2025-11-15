@@ -116,7 +116,20 @@ export class CodeGenerator {
         return `<button${onclickAttr}${styleAttr}>${this.escapeHTML(value)}${childrenHTML}</button>`;
 
       case "input":
-        return `<input type="text" placeholder="${this.escapeHTML(value)}"${styleAttr} />`;
+        const inputValue = node.attributes?.value;
+        const onChange = node.attributes?.onChange;
+        const inputId = inputValue ? `input-${inputValue}` : `input-${Math.random().toString(36).substr(2, 9)}`;
+        
+        let inputAttrs = `type="text" id="${inputId}" placeholder="${this.escapeHTML(value)}"${styleAttr}`;
+        
+        if (inputValue) {
+          inputAttrs += ` data-bind="${inputValue}"`;
+        }
+        if (onChange) {
+          inputAttrs += ` data-onchange="${onChange}"`;
+        }
+        
+        return `<input ${inputAttrs} />`;
 
       case "container":
         return `<div${styleAttr}>${this.escapeHTML(value)}${childrenHTML}</div>`;
@@ -527,6 +540,36 @@ export class CodeGenerator {
           js += `  };\n`;
           js += `  \n`;
           js += `  Frobo.setupConditionals();\n`;
+          js += `  \n`;
+          
+          // Add input binding setup
+          js += `  // Setup input binding\n`;
+          js += `  document.querySelectorAll('input[data-bind]').forEach(input => {\n`;
+          js += `    const stateKey = input.getAttribute('data-bind');\n`;
+          js += `    const onChange = input.getAttribute('data-onchange');\n`;
+          js += `    \n`;
+          js += `    // Set initial value\n`;
+          js += `    if (state[stateKey] !== undefined) {\n`;
+          js += `      input.value = state[stateKey];\n`;
+          js += `    }\n`;
+          js += `    \n`;
+          js += `    // Listen for changes\n`;
+          js += `    input.addEventListener('input', (e) => {\n`;
+          js += `      state[stateKey] = e.target.value;\n`;
+          js += `      if (onChange && typeof window[onChange] === 'function') {\n`;
+          js += `        window[onChange](e.target.value);\n`;
+          js += `      }\n`;
+          js += `    });\n`;
+          js += `    \n`;
+          js += `    // Update input when state changes\n`;
+          js += `    const originalUpdate = Frobo.updateDOM;\n`;
+          js += `    Frobo.updateDOM = function(key) {\n`;
+          js += `      originalUpdate.call(this, key);\n`;
+          js += `      if (key === stateKey && input.value !== String(state[stateKey])) {\n`;
+          js += `        input.value = state[stateKey];\n`;
+          js += `      }\n`;
+          js += `    };\n`;
+          js += `  });\n`;
           js += `  \n`;
           
           // Add loop rendering setup

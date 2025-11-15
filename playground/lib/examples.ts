@@ -258,6 +258,70 @@ component App {
     text "And they can be styled independently"
   }
 }`
+  },
+  {
+    id: 'input-forms',
+    name: 'Input & Forms',
+    description: 'Capture user input with two-way binding',
+    code: `component FormDemo {
+  state name = ""
+  state email = ""
+  state message = ""
+  
+  heading "Contact Form" style={
+    fontSize: "36"
+    color: "#1e293b"
+  }
+  
+  container style={ background: "#f8fafc", padding: "24", borderRadius: "12" } {
+    text "Name: {name}" style={ fontSize: "18", color: "#64748b" }
+    input "Enter your name" value=name style={
+      padding: "12"
+      fontSize: "16"
+      borderRadius: "8"
+      border: "2px solid #e2e8f0"
+      width: "100%"
+    }
+    
+    text "Email: {email}" style={ fontSize: "18", color: "#64748b" }
+    input "Enter your email" value=email style={
+      padding: "12"
+      fontSize: "16"
+      borderRadius: "8"
+      border: "2px solid #e2e8f0"
+      width: "100%"
+    }
+    
+    text "Message: {message}" style={ fontSize: "18", color: "#64748b" }
+    input "Enter your message" value=message style={
+      padding: "12"
+      fontSize: "16"
+      borderRadius: "8"
+      border: "2px solid #e2e8f0"
+      width: "100%"
+    }
+    
+    button "Submit" onClick=submitForm bg="#3b82f6" color="white" padding="16" rounded="8" style={
+      fontSize: "18"
+      fontWeight: "600"
+    }
+    
+    button "Clear" onClick=clearForm bg="#ef4444" color="white" padding="16" rounded="8" style={
+      fontSize: "18"
+      fontWeight: "600"
+    }
+  }
+}
+
+function submitForm() {
+  name = "Submitted!"
+}
+
+function clearForm() {
+  name = ""
+  email = ""
+  message = ""
+}`
   }
 ];
 
