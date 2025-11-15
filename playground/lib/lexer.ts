@@ -21,6 +21,7 @@ export enum TokenType {
     PAREN_OPEN,
     PAREN_CLOSE,
     COMMA,
+    COLON,
     DOT,
     NEWLINE,
     EOF
@@ -98,6 +99,7 @@ export class Lexer {
             case '(': return this.makeToken(TokenType.PAREN_OPEN, '(');
             case ')': return this.makeToken(TokenType.PAREN_CLOSE, ')');
             case ',': return this.makeToken(TokenType.COMMA, ',');
+            case ':': return this.makeToken(TokenType.COLON, ':');
             case '+': return this.makeToken(TokenType.PLUS, '+');
             case '-': return this.makeToken(TokenType.MINUS, '-');
             case '*': return this.makeToken(TokenType.MULTIPLY, '*');
@@ -152,7 +154,7 @@ export class Lexer {
     }
 
     private isAlpha(char: string): boolean {
-        return /[a-zA-z_]/.test(char);
+        return /[a-zA-Z_]/.test(char);
     }
 
     private isDigit(char: string): boolean {

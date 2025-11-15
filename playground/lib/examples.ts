@@ -190,17 +190,30 @@ function reset() {
     name: 'Todo List (Loops)',
     description: 'Render lists with for...in',
     code: `component TodoList {
-  state count = 3
+  state items = ["Buy milk", "Learn Frobo", "Build apps"]
   
   heading "My Todo List"
-  text "Total items: {count}"
-  text "Loop rendering coming soon!"
   
-  button "Add Item" onClick=addItem
-}
-
-function addItem() {
-  count = count + 1
+  for item in items {
+    text "{item}"
+  }
+}`
+  },
+  {
+    id: 'styled-card',
+    name: 'Styled Card',
+    description: 'Custom styling with CSS',
+    code: `component StyledCard {
+  heading "Beautiful Card" style={ color: "#2563eb", fontSize: "32" }
+  
+  text "This card has custom styles!" style={
+    color: "#64748b"
+    fontSize: "18"
+    padding: "10"
+  }
+  
+  button "Primary Button" bg="#3b82f6" color="white" padding="12"
+  button "Secondary" bg="#e2e8f0" color="#1e293b" rounded="8"
 }`
   }
 ];

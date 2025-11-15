@@ -71,6 +71,7 @@ export class CodeGenerator {
     const name = node.name || "div";
     const value = node.value || "";
     const onClick = node.attributes?.onClick;
+    const styleAttr = node.styles ? ` style="${this.generateInlineStyles(node.styles)}"` : "";
 
     switch (name) {
       case "text":
@@ -80,27 +81,60 @@ export class CodeGenerator {
             const varName = match[1];
             return `<p id="text-${varName}" data-template="${this.escapeHTML(
               value
-            )}">${this.escapeHTML(value.replace(/\{(\w+)\}/, "0"))}</p>`;
+            )}"${styleAttr}>${this.escapeHTML(value.replace(/\{(\w+)\}/, "0"))}</p>`;
           }
         }
-        return `<p>${this.escapeHTML(value)}</p>`;
+        return `<p${styleAttr}>${this.escapeHTML(value)}</p>`;
 
       case "heading":
-        return `<h1>${this.escapeHTML(value)}</h1>`;
+        return `<h1${styleAttr}>${this.escapeHTML(value)}</h1>`;
 
       case "button":
         const onclickAttr = onClick ? ` onclick="${onClick}()"` : "";
-        return `<button${onclickAttr}>${this.escapeHTML(value)}</button>`;
+        return `<button${onclickAttr}${styleAttr}>${this.escapeHTML(value)}</button>`;
 
       case "input":
-        return `<input type="text" placeholder="${this.escapeHTML(value)}" />`;
+        return `<input type="text" placeholder="${this.escapeHTML(value)}"${styleAttr} />`;
 
       case "container":
-        return `<div>${this.escapeHTML(value)}</div>`;
+        return `<div${styleAttr}>${this.escapeHTML(value)}</div>`;
 
       default:
-        return `<div>${this.escapeHTML(value)}</div>`;
+        return `<div${styleAttr}>${this.escapeHTML(value)}</div>`;
     }
+  }
+  
+  private generateInlineStyles(styles: Record<string, string>): string {
+    return Object.entries(styles)
+      .map(([prop, value]) => {
+        // Convert camelCase to kebab-case
+        const cssProp = this.camelToKebab(prop);
+        
+        // Add 'px' unit if value is a number without units
+        const cssValue = this.addUnitIfNeeded(cssProp, value);
+        
+        return `${cssProp}: ${cssValue}`;
+      })
+      .join('; ');
+  }
+  
+  private camelToKebab(str: string): string {
+    return str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+  }
+  
+  private addUnitIfNeeded(property: string, value: string): string {
+    // Properties that need units
+    const needsUnit = [
+      'width', 'height', 'margin', 'padding', 'top', 'right', 'bottom', 'left',
+      'font-size', 'border-width', 'border-radius', 'gap'
+    ];
+    
+    // Check if value is a pure number (no units)
+    if (/^\d+$/.test(value) && needsUnit.includes(property)) {
+      return value + 'px';
+    }
+    
+    return value;
   }
 
   private generateIfStatement(node: ASTNode): string {

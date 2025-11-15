@@ -115,7 +115,7 @@ export class Lexer {
     }
 
     private isAlpha(char: string): boolean {
-        return /[a-zA-z_]/.test(char);
+        return /[a-zA-Z_]/.test(char);
     }
 
     private isDigit(char: string): boolean {

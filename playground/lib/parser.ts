@@ -20,6 +20,7 @@ export interface ASTNode {
     name?: string;
     children?: ASTNode[];
     attributes?: Record<string, any>;
+    styles?: Record<string, string>;
     condition?: ASTNode;
     consequent?: ASTNode[];
     alternate?: ASTNode[];
@@ -183,20 +184,54 @@ export class Parser {
         
         let value = '';
         const attributes: Record<string, any> = {};
+        let styles: Record<string, string> = {};
 
         if(this.current().type === TokenType.STRING) {
             const valueToken = this.expect(TokenType.STRING);
             value = valueToken.value;
         }
 
-        while(this.current().type === TokenType.IDENTIFIER && this.peek().type === TokenType.EQUALS) {
+        while(this.current().type === TokenType.IDENTIFIER) {
             const attrName = this.current().value;
-            this.advance();
-
-            if(this.current().type === TokenType.EQUALS) {
-                this.advance();
+            
+            // Check if it's a style attribute
+            if(attrName === 'style' && this.peek().type === TokenType.EQUALS) {
+                this.advance(); // consume 'style'
+                this.advance(); // consume '='
+                
+                // Expect opening brace
+                this.expect(TokenType.BRACE_OPEN);
+                
+                // Parse style properties
+                styles = this.parseStyleBlock();
+                
+                // Expect closing brace
+                this.expect(TokenType.BRACE_CLOSE);
+            }
+            // Check for shorthand style attributes (bg, color, padding, rounded)
+            else if(['bg', 'color', 'padding', 'rounded'].includes(attrName) && this.peek().type === TokenType.EQUALS) {
+                this.advance(); // consume attribute name
+                this.advance(); // consume '='
+                
+                if(this.current().type === TokenType.STRING) {
+                    const styleValue = this.current().value;
+                    this.advance();
+                    
+                    // Convert shorthand to full CSS property
+                    const cssProperty = this.shorthandToCss(attrName);
+                    styles[cssProperty] = styleValue;
+                }
+            }
+            // Regular attributes (onClick, etc.)
+            else if(this.peek().type === TokenType.EQUALS) {
+                this.advance(); // consume attribute name
+                this.advance(); // consume '='
 
                 if(this.current().type === TokenType.IDENTIFIER) {
+                    const attrValue = this.current().value;
+                    this.advance();
+                    attributes[attrName] = attrValue;
+                } else if(this.current().type === TokenType.STRING) {
                     const attrValue = this.current().value;
                     this.advance();
                     attributes[attrName] = attrValue;
@@ -209,9 +244,71 @@ export class Parser {
         return {
             type: NodeType.ELEMENT,
             name: nameToken.value,
-            value:value,
-            attributes: Object.keys(attributes).length > 0 ? attributes : undefined
+            value: value,
+            attributes: Object.keys(attributes).length > 0 ? attributes : undefined,
+            styles: Object.keys(styles).length > 0 ? styles : undefined
+        } as ASTNode;
+    }
+    
+    private parseStyleBlock(): Record<string, string> {
+        const styles: Record<string, string> = {};
+        
+        while(this.current().type === TokenType.NEWLINE) {
+            this.advance();
         }
+        
+        while(this.current().type !== TokenType.BRACE_CLOSE) {
+            // Skip newlines
+            while(this.current().type === TokenType.NEWLINE) {
+                this.advance();
+            }
+            
+            if(this.current().type === TokenType.BRACE_CLOSE) {
+                break;
+            }
+            
+            // Parse property name
+            const propName = this.expect(TokenType.IDENTIFIER).value;
+            
+            // Expect colon
+            this.expect(TokenType.COLON);
+            
+            // Parse property value (can be string or number)
+            let propValue: string;
+            if(this.current().type === TokenType.STRING) {
+                propValue = this.current().value;
+                this.advance();
+            } else if(this.current().type === TokenType.NUMBER) {
+                propValue = this.current().value;
+                this.advance();
+            } else {
+                throw new Error(`Expected string or number for style value at line ${this.current().line}`);
+            }
+            
+            styles[propName] = propValue;
+            
+            // Skip optional comma
+            if(this.current().type === TokenType.COMMA) {
+                this.advance();
+            }
+            
+            // Skip newlines
+            while(this.current().type === TokenType.NEWLINE) {
+                this.advance();
+            }
+        }
+        
+        return styles;
+    }
+    
+    private shorthandToCss(shorthand: string): string {
+        const map: Record<string, string> = {
+            'bg': 'background',
+            'color': 'color',
+            'padding': 'padding',
+            'rounded': 'border-radius'
+        };
+        return map[shorthand] || shorthand;
     }
 
     private current(): Token { 
@@ -339,7 +436,7 @@ export class Parser {
         };
     }
 
-    private parseArrayLiteral(): any[] {
+    private parseArrayLiteral(): unknown[] {
         this.expect(TokenType.BRACKET_OPEN);
 
         const items: unknown[] = [];
