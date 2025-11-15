@@ -30,6 +30,9 @@ export class CodeGenerator {
       case NodeType.COMPONENT:
         return this.generateComponent(node);
 
+      case NodeType.COMPONENT_INSTANCE:
+        return this.generateComponentInstance(node);
+
       case NodeType.ELEMENT:
         return this.generateElement(node);
 
@@ -52,12 +55,21 @@ export class CodeGenerator {
 
   private generateComponent(node: ASTNode): string {
     const name = node.name || "component";
+    
+    // Check if component has props
+    const propsNode = node.children?.find(child => child.type === NodeType.PROPS_DECLARATION);
+    
+    // If component has props, don't render it directly - it will be instantiated
+    if (propsNode) {
+      return `<!-- Component ${name} defined with props: ${(propsNode.value as string[]).join(', ')} -->`;
+    }
 
     this.indentLevel++;
 
     let childrenHTML = "";
     if (node.children) {
       childrenHTML = node.children
+        .filter(child => child.type !== NodeType.PROPS_DECLARATION)
         .map((child) => this.indent() + this.generateHTML(child))
         .join("\n");
     }
@@ -102,6 +114,61 @@ export class CodeGenerator {
       default:
         return `<div${styleAttr}>${this.escapeHTML(value)}</div>`;
     }
+  }
+  
+  private generateComponentInstance(node: ASTNode): string {
+    const componentName = node.name || "Component";
+    const props = node.attributes || {};
+    
+    // Find the component definition
+    const componentDef = this.ast.children?.find(
+      child => child.type === NodeType.COMPONENT && child.name === componentName
+    );
+    
+    if (!componentDef) {
+      return `<!-- Error: Component ${componentName} not found -->`;
+    }
+    
+    // Component has props, we'll substitute them during rendering
+    
+    // Render component with props substituted
+    this.indentLevel++;
+    
+    let childrenHTML = "";
+    if (componentDef.children) {
+      childrenHTML = componentDef.children
+        .filter(child => child.type !== NodeType.PROPS_DECLARATION)
+        .map((child) => {
+          // Substitute prop values in the child nodes
+          const substitutedChild = this.substitutePropValues(child, props);
+          return this.indent() + this.generateHTML(substitutedChild);
+        })
+        .join("\n");
+    }
+    
+    this.indentLevel--;
+    
+    const instanceId = `${componentName}-${Math.random().toString(36).substr(2, 9)}`;
+    return `<div id="${instanceId}" class="frobo-component-instance">\n${childrenHTML}\n</div>`;
+  }
+  
+  private substitutePropValues(node: ASTNode, props: Record<string, any>): ASTNode {
+    // Clone the node
+    const newNode = { ...node };
+    
+    // Substitute props in value
+    if (newNode.value && typeof newNode.value === 'string') {
+      Object.entries(props).forEach(([propName, propValue]) => {
+        newNode.value = newNode.value.replace(new RegExp(`\\{${propName}\\}`, 'g'), String(propValue));
+      });
+    }
+    
+    // Recursively substitute in children
+    if (newNode.children) {
+      newNode.children = newNode.children.map(child => this.substitutePropValues(child, props));
+    }
+    
+    return newNode;
   }
   
   private generateInlineStyles(styles: Record<string, string>): string {

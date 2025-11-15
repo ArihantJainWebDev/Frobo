@@ -3,9 +3,11 @@ import { Token, TokenType } from "./lexer";
 export enum NodeType {
     PROGRAM,
     COMPONENT,
+    COMPONENT_INSTANCE,
     ELEMENT,
     FUNCTION,
     STATE_DECLARATION,
+    PROPS_DECLARATION,
     IF_STATEMENT,
     FOR_LOOP,
     CONDITION,
@@ -122,7 +124,9 @@ export class Parser {
 
         const children: ASTNode[] = [];
         while(this.current().type !== TokenType.BRACE_CLOSE) {
-            if(this.current().type === TokenType.KEYWORD && this.current().value === 'state') {
+            if(this.current().type === TokenType.KEYWORD && this.current().value === 'props') {
+                children.push(this.parseProps());
+            } else if(this.current().type === TokenType.KEYWORD && this.current().value === 'state') {
                 children.push(this.parseState());
             } else if(this.current().type === TokenType.KEYWORD && this.current().value === 'if') {
                 children.push(this.parseIfStatement());
@@ -143,6 +147,26 @@ export class Parser {
             type: NodeType.COMPONENT,
             name: nameToken.value,
             children
+        };
+    }
+    
+    private parseProps(): ASTNode {
+        this.expect(TokenType.KEYWORD); // 'props'
+        
+        const propNames: string[] = [];
+        
+        // Parse first prop name
+        propNames.push(this.expect(TokenType.IDENTIFIER).value);
+        
+        // Parse additional prop names separated by commas
+        while(this.current().type === TokenType.COMMA) {
+            this.advance(); // consume comma
+            propNames.push(this.expect(TokenType.IDENTIFIER).value);
+        }
+        
+        return {
+            type: NodeType.PROPS_DECLARATION,
+            value: propNames
         };
     }
 
@@ -181,6 +205,10 @@ export class Parser {
     
     private parseElement(): ASTNode { 
         const nameToken = this.expect(TokenType.IDENTIFIER);
+        const elementName = nameToken.value;
+        
+        // Check if it's a component instance (starts with uppercase)
+        const isComponentInstance = /^[A-Z]/.test(elementName);
         
         let value = '';
         const attributes: Record<string, any> = {};
@@ -222,7 +250,7 @@ export class Parser {
                     styles[cssProperty] = styleValue;
                 }
             }
-            // Regular attributes (onClick, etc.)
+            // Regular attributes (onClick, props, etc.)
             else if(this.peek().type === TokenType.EQUALS) {
                 this.advance(); // consume attribute name
                 this.advance(); // consume '='
@@ -235,6 +263,10 @@ export class Parser {
                     const attrValue = this.current().value;
                     this.advance();
                     attributes[attrName] = attrValue;
+                } else if(this.current().type === TokenType.NUMBER) {
+                    const attrValue = this.current().value;
+                    this.advance();
+                    attributes[attrName] = attrValue;
                 }
             } else {
                 break;
@@ -242,8 +274,8 @@ export class Parser {
         }
 
         return {
-            type: NodeType.ELEMENT,
-            name: nameToken.value,
+            type: isComponentInstance ? NodeType.COMPONENT_INSTANCE : NodeType.ELEMENT,
+            name: elementName,
             value: value,
             attributes: Object.keys(attributes).length > 0 ? attributes : undefined,
             styles: Object.keys(styles).length > 0 ? styles : undefined

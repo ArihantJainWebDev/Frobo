@@ -215,6 +215,25 @@ function reset() {
   button "Primary Button" bg="#3b82f6" color="white" padding="12"
   button "Secondary" bg="#e2e8f0" color="#1e293b" rounded="8"
 }`
+  },
+  {
+    id: 'reusable-components',
+    name: 'Reusable Components',
+    description: 'Components with props',
+    code: `component Card {
+  props title, message
+  
+  heading "{title}"
+  text "{message}"
+}
+
+component App {
+  heading "Component Props Demo"
+  
+  Card title="Welcome" message="This is a reusable card component"
+  Card title="Hello" message="Props make components flexible"
+  Card title="Awesome" message="Build once, use everywhere!"
+}`
   }
 ];
 
