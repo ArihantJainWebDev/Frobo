@@ -559,9 +559,52 @@ export class CodeGenerator {
           states.forEach((state) => {
             js += `let ${state.name} = state.${state.name};\n`;
           });
+          
+          // Add computed properties
+          const computed = component.children.filter(
+            (child) => child.type === NodeType.COMPUTED_DECLARATION
+          );
+          
+          if (computed.length > 0) {
+            js += "\n// Computed properties\n";
+            computed.forEach((comp) => {
+              js += `Object.defineProperty(state, '${comp.name}', {\n`;
+              js += `  get() { return ${comp.value}; },\n`;
+              js += `  enumerable: true\n`;
+              js += `});\n`;
+              js += `let ${comp.name} = state.${comp.name};\n`;
+            });
+          }
+          
+          // Add lifecycle hooks
+          const hooks = component.children.filter(
+            (child) => child.type === NodeType.LIFECYCLE_HOOK
+          );
+          
           js += "\n";
           js += `// Register reactive elements\n`;
           js += `window.addEventListener('DOMContentLoaded', () => {\n`;
+          
+          // Add onMount hooks
+          const onMountHooks = hooks.filter(h => h.name === 'onMount');
+          if (onMountHooks.length > 0) {
+            js += `  // onMount lifecycle\n`;
+            onMountHooks.forEach(hook => {
+              let hookBody = hook.value;
+              // Replace state references
+              states.forEach((state) => {
+                hookBody = hookBody.replace(
+                  new RegExp(`\\b${state.name}\\s*=`, "g"),
+                  `state.${state.name} =`
+                );
+                hookBody = hookBody.replace(
+                  new RegExp(`\\b${state.name}\\b(?!\\s*=)`, "g"),
+                  `state.${state.name}`
+                );
+              });
+              js += `  ${hookBody}\n`;
+            });
+          }
           states.forEach((state) => {
             js += `  const elem_${state.name} = document.getElementById('text-${state.name}');\n`;
             js += `  if (elem_${state.name}) Frobo.watch('${state.name}', elem_${state.name});\n`;

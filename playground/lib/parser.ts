@@ -7,6 +7,8 @@ export enum NodeType {
     ELEMENT,
     FUNCTION,
     STATE_DECLARATION,
+    COMPUTED_DECLARATION,
+    LIFECYCLE_HOOK,
     PROPS_DECLARATION,
     IF_STATEMENT,
     FOR_LOOP,
@@ -128,6 +130,10 @@ export class Parser {
                 children.push(this.parseProps());
             } else if(this.current().type === TokenType.KEYWORD && this.current().value === 'state') {
                 children.push(this.parseState());
+            } else if(this.current().type === TokenType.KEYWORD && this.current().value === 'computed') {
+                children.push(this.parseComputed());
+            } else if(this.current().type === TokenType.KEYWORD && (this.current().value === 'onMount' || this.current().value === 'onUpdate')) {
+                children.push(this.parseLifecycleHook());
             } else if(this.current().type === TokenType.KEYWORD && this.current().value === 'if') {
                 children.push(this.parseIfStatement());
             } else if(this.current().type === TokenType.KEYWORD && this.current().value === 'for') {
@@ -167,6 +173,62 @@ export class Parser {
         return {
             type: NodeType.PROPS_DECLARATION,
             value: propNames
+        };
+    }
+
+    private parseComputed(): ASTNode {
+        this.expect(TokenType.KEYWORD); // 'computed'
+
+        const nameToken = this.expect(TokenType.IDENTIFIER);
+
+        this.expect(TokenType.EQUALS);
+
+        // Parse the expression (everything until newline)
+        let expression = '';
+        while(this.current().type !== TokenType.NEWLINE && this.current().type !== TokenType.EOF) {
+            expression += this.current().value + ' ';
+            this.advance();
+        }
+
+        return {
+            type: NodeType.COMPUTED_DECLARATION,
+            name: nameToken.value,
+            value: expression.trim()
+        };
+    }
+    
+    private parseLifecycleHook(): ASTNode {
+        const hookName = this.current().value; // 'onMount' or 'onUpdate'
+        this.advance();
+
+        this.expect(TokenType.BRACE_OPEN);
+
+        while(this.current().type === TokenType.NEWLINE) {
+            this.advance();
+        }
+
+        const body: string[] = [];
+
+        while(this.current().type !== TokenType.BRACE_CLOSE) {
+            if(this.current().type === TokenType.NEWLINE) {
+                body.push(';\n');
+                this.advance();
+            } else {
+                if(this.current().type === TokenType.STRING) {
+                    body.push(`"${this.current().value}"`);
+                } else {
+                    body.push(this.current().value);
+                }
+                this.advance();
+            }
+        }
+
+        this.expect(TokenType.BRACE_CLOSE);
+
+        return {
+            type: NodeType.LIFECYCLE_HOOK,
+            name: hookName,
+            value: body.join(' ')
         };
     }
 

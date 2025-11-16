@@ -443,6 +443,52 @@ function clearForm() {
     }
   }
 }`
+  },
+  {
+    id: 'computed-lifecycle',
+    name: 'Computed & Lifecycle',
+    description: 'Computed properties and lifecycle hooks',
+    code: `component UserProfile {
+  state firstName = "John"
+  state lastName = "Doe"
+  state age = 25
+  
+  computed fullName = firstName + " " + lastName
+  computed isAdult = age >= 18
+  computed greeting = "Hello, " + fullName + "!"
+  
+  onMount {
+    console.log("Component mounted!")
+    age = age + 1
+  }
+  
+  h1 "User Profile" style={ fontSize: "36", color: "#1e293b" }
+  
+  container bg="#f8fafc" padding="24" rounded="12" {
+    h2 "Personal Info" style={ fontSize: "24", color: "#475569" }
+    
+    text "First Name: {firstName}"
+    input "First name" value=firstName style={ padding: "12", borderRadius: "8" }
+    
+    text "Last Name: {lastName}"
+    input "Last name" value=lastName style={ padding: "12", borderRadius: "8" }
+    
+    text "Age: {age}"
+    button "Birthday!" onClick=birthday bg="#3b82f6" color="white" padding="12" rounded="8"
+  }
+  
+  container bg="#dbeafe" padding="24" rounded="12" {
+    h2 "Computed Values" style={ fontSize: "24", color: "#1e40af" }
+    
+    text "Full Name: {fullName}" style={ fontSize: "20", fontWeight: "600" }
+    text "Greeting: {greeting}" style={ fontSize: "18", color: "#3b82f6" }
+    text "Adult Status: {isAdult}" style={ fontSize: "18" }
+  }
+}
+
+function birthday() {
+  age = age + 1
+}`
   }
 ];
 
