@@ -111,12 +111,15 @@ export class CodeGenerator {
     switch (name) {
       case "text":
         if (value.includes("{") && value.includes("}")) {
-          const match = value.match(/\{(\w+)\}/);
-          if (match) {
-            const varName = match[1];
-            return `<p id="text-${varName}" data-template="${this.escapeHTML(
+          // Extract all variable names from the template
+          const matches = value.match(/\{(\w+)\}/g);
+          if (matches) {
+            const varNames = matches.map((m: string) => m.slice(1, -1)); // Remove { }
+            const uniqueId = `text-${varNames.join('-')}`;
+            // Keep the template as-is for initial display (will be updated by JS)
+            return `<p id="${uniqueId}" data-template="${this.escapeHTML(
               value
-            )}"${classAttr}${styleAttr}>${this.escapeHTML(value.replace(/\{(\w+)\}/, "0"))}</p>`;
+            )}" data-vars="${varNames.join(',')}"${classAttr}${styleAttr}>${this.escapeHTML(value)}</p>`;
           }
         }
         return `<p${classAttr}${styleAttr}>${this.escapeHTML(value)}${childrenHTML}</p>`;
@@ -441,7 +444,7 @@ export class CodeGenerator {
   createState(initialState) {
     const self = this;
     this.state = new Proxy(initialState, {
-      set: (target, property, value) {
+      set: (target, property, value) => {
         const oldValue = target[property];
         target[property] = value;
         self.scheduleUpdate(property);
@@ -496,7 +499,19 @@ export class CodeGenerator {
       elements.forEach(element => {
         const template = element.getAttribute('data-template');
         if (template) {
-          element.textContent = template.replace('{' + stateKey + '}', String(self.state[stateKey]));
+          // Replace all variables in the template with their current state values
+          let result = template;
+          const vars = element.getAttribute('data-vars');
+          if (vars) {
+            vars.split(',').forEach(varName => {
+              const regex = new RegExp('\\{' + varName + '\\}', 'g');
+              result = result.replace(regex, String(self.state[varName]));
+            });
+          } else {
+            // Fallback for single variable (old format)
+            result = result.replace(new RegExp('\\{' + stateKey + '\\}', 'g'), String(self.state[stateKey]));
+          }
+          element.textContent = result;
         }
       });
     }
@@ -715,10 +730,16 @@ export class CodeGenerator {
               js += `  ${hookBody}\n`;
             });
           }
-          states.forEach((state) => {
-            js += `  const elem_${state.name} = document.getElementById('text-${state.name}');\n`;
-            js += `  if (elem_${state.name}) Frobo.watch('${state.name}', elem_${state.name});\n`;
-          });
+          // Setup watchers for elements with multiple variables
+          js += `  // Setup text element watchers\n`;
+          js += `  document.querySelectorAll('[data-vars]').forEach(el => {\n`;
+          js += `    const vars = el.getAttribute('data-vars').split(',');\n`;
+          js += `    vars.forEach(varName => {\n`;
+          js += `      Frobo.watch(varName, el);\n`;
+          js += `    });\n`;
+          js += `    // Initial update\n`;
+          js += `    if (vars.length > 0) Frobo.updateDOM(vars[0]);\n`;
+          js += `  });\n`;
           
           // Add conditional rendering setup
           js += `\n  // Setup conditional rendering\n`;

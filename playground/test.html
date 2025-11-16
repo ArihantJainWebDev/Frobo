@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Test</title>
+</head>
+<body>
+  <div id="Counter" class="frobo-component">
+    <h1>Counter App</h1>
+    <p id="text-count" data-template="Count: {count}">Count: 0</p>
+    <button onclick="increment()">Increment</button>
+    <button onclick="decrement()">Decrement</button>
+    <button onclick="reset()">Reset</button>
+  </div>
+
+  <script>
+const Frobo = {
+  state: {},
+  dependencies: {},
+  domBindings: [],
+  updateQueue: new Set(),
+  updateScheduled: false,
+  
+  watchers: {},
+  
+  createState(initialState) {
+    const self = this;
+    this.state = new Proxy(initialState, {
+      set: (target, property, value) => {
+        const oldValue = target[property];
+        target[property] = value;
+        self.scheduleUpdate(property);
+        if (self.watchers[property]) {
+          self.watchers[property].forEach(callback => callback(value, oldValue));
+        }
+        return true;
+      }
+    });
+    return this.state;
+  },
+  
+  watch(stateKey, element) {
+    if (!this.dependencies[stateKey]) {
+      this.dependencies[stateKey] = [];
+    }
+    this.dependencies[stateKey].push(element);
+  },
+  
+  scheduleUpdate(stateKey) {
+    const self = this;
+    this.updateQueue.add(stateKey);
+    if (!this.updateScheduled) {
+      this.updateScheduled = true;
+      requestAnimationFrame(() => {
+        self.flushUpdates();
+      });
+    }
+  },
+  
+  flushUpdates() {
+    const self = this;
+    this.updateQueue.forEach(key => {
+      self.updateDOM(key);
+    });
+    this.updateQueue.clear();
+    this.updateScheduled = false;
+  },
+  
+  updateDOM(stateKey) {
+    const self = this;
+    const elements = this.dependencies[stateKey];
+    if (elements) {
+      elements.forEach(element => {
+        const template = element.getAttribute('data-template');
+        if (template) {
+          element.textContent = template.replace('{' + stateKey + '}', String(self.state[stateKey]));
+        }
+      });
+    }
+  }
+};
+
+const state = Frobo.createState({ count: 0 });
+let count = state.count;
+
+window.addEventListener('DOMContentLoaded', () => {
+  const elem_count = document.getElementById('text-count');
+  if (elem_count) Frobo.watch('count', elem_count);
+});
+
+function increment() {
+  state.count = state.count + 1;
+}
+
+function decrement() {
+  state.count = state.count - 1;
+}
+
+function reset() {
+  state.count = 0;
+}
+
+console.log("Frobo app loaded!");
+  </script>
+</body>
+</html>

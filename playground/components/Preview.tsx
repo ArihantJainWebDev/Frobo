@@ -14,28 +14,28 @@ export default function Preview({ output }: PreviewProps) {
   console.log('📺 Preview component rendered with output:', output);
 
   // Generate the HTML content for the iframe
-  const htmlContent = output ? `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="UTF-8">
-        <style>
-          body {
-            margin: 0;
-            padding: 20px;
-            font-family: system-ui, -apple-system, sans-serif;
-          }
-          ${output.css}
-        </style>
-      </head>
-      <body>
-        ${output.html}
-        <script>
-          ${output.js}
-        </script>
-      </body>
-    </html>
-  ` : `
+  const htmlContent = output ? 
+    '<!DOCTYPE html>\n' +
+    '<html>\n' +
+    '<head>\n' +
+    '<meta charset="UTF-8">\n' +
+    '<style>\n' +
+    'body {\n' +
+    '  margin: 0;\n' +
+    '  padding: 20px;\n' +
+    '  font-family: system-ui, -apple-system, sans-serif;\n' +
+    '}\n' +
+    output.css +
+    '\n</style>\n' +
+    '</head>\n' +
+    '<body>\n' +
+    output.html +
+    '\n<script>\n' +
+    output.js +
+    '\n</script>\n' +
+    '</body>\n' +
+    '</html>'
+   : `
     <!DOCTYPE html>
     <html>
       <head>
@@ -66,7 +66,7 @@ export default function Preview({ output }: PreviewProps) {
       </div>
       <iframe
         className="flex-1 w-full border-0"
-        sandbox="allow-scripts"
+        sandbox="allow-scripts allow-same-origin"
         title="Preview"
         srcDoc={htmlContent}
       />
