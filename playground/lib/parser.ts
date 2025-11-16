@@ -192,8 +192,11 @@ export class Parser {
         } else if(this.current().type === TokenType.BRACKET_OPEN) {
             // Parse array literal
             value = this.parseArrayLiteral();
+        } else if(this.current().type === TokenType.BRACE_OPEN) {
+            // Parse object literal
+            value = this.parseObjectLiteral();
         } else {
-            throw new Error(`Expected number, string, or array for state value at line ${this.current().line}. Got: ${TokenType[this.current().type]} with value: "${this.current().value}"`);
+            throw new Error(`Expected number, string, array, or object for state value at line ${this.current().line}. Got: ${TokenType[this.current().type]} with value: "${this.current().value}"`);
         }
 
         return {
@@ -236,8 +239,8 @@ export class Parser {
                 // Expect closing brace
                 this.expect(TokenType.BRACE_CLOSE);
             }
-            // Check for shorthand style attributes (bg, color, padding, rounded)
-            else if(['bg', 'color', 'padding', 'rounded'].includes(attrName) && this.peek().type === TokenType.EQUALS) {
+            // Check for shorthand style attributes
+            else if(['bg', 'color', 'padding', 'rounded', 'margin', 'width', 'height', 'gap', 'shadow'].includes(attrName) && this.peek().type === TokenType.EQUALS) {
                 this.advance(); // consume attribute name
                 this.advance(); // consume '='
                 
@@ -246,6 +249,12 @@ export class Parser {
                     this.advance();
                     
                     // Convert shorthand to full CSS property
+                    const cssProperty = this.shorthandToCss(attrName);
+                    styles[cssProperty] = styleValue;
+                } else if(this.current().type === TokenType.NUMBER) {
+                    const styleValue = this.current().value;
+                    this.advance();
+                    
                     const cssProperty = this.shorthandToCss(attrName);
                     styles[cssProperty] = styleValue;
                 }
@@ -366,7 +375,12 @@ export class Parser {
             'bg': 'background',
             'color': 'color',
             'padding': 'padding',
-            'rounded': 'border-radius'
+            'rounded': 'border-radius',
+            'margin': 'margin',
+            'width': 'width',
+            'height': 'height',
+            'gap': 'gap',
+            'shadow': 'box-shadow'
         };
         return map[shorthand] || shorthand;
     }
@@ -543,6 +557,57 @@ export class Parser {
         this.expect(TokenType.BRACKET_CLOSE);
 
         return items;
+    }
+    
+    private parseObjectLiteral(): Record<string, any> {
+        this.expect(TokenType.BRACE_OPEN);
+
+        const obj: Record<string, any> = {};
+
+        while(this.current().type === TokenType.NEWLINE) {
+            this.advance();
+        }
+
+        while(this.current().type !== TokenType.BRACE_CLOSE) {
+            while(this.current().type === TokenType.NEWLINE) {
+                this.advance();
+            }
+
+            if(this.current().type === TokenType.BRACE_CLOSE) {
+                break;
+            }
+
+            const key = this.expect(TokenType.IDENTIFIER).value;
+            this.expect(TokenType.COLON);
+            
+            let value: unknown;
+            if(this.current().type === TokenType.STRING) {
+                value = this.current().value;
+                this.advance();
+            } else if(this.current().type === TokenType.NUMBER) {
+                value = parseFloat(this.current().value);
+                this.advance();
+            } else {
+                throw new Error(`Expected string or number in object at line ${this.current().line}`);
+            }
+            
+            obj[key] = value;
+
+            while(this.current().type === TokenType.NEWLINE) {
+                this.advance();
+            }
+
+            if(this.current().type === TokenType.COMMA) {
+                this.advance();
+                while(this.current().type === TokenType.NEWLINE) {
+                    this.advance();
+                }
+            }
+        }
+
+        this.expect(TokenType.BRACE_CLOSE);
+
+        return obj;
     }
 
     private parseForLoop(): ASTNode {

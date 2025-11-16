@@ -109,7 +109,16 @@ export class CodeGenerator {
         return `<p${styleAttr}>${this.escapeHTML(value)}${childrenHTML}</p>`;
 
       case "heading":
-        return `<h1${styleAttr}>${this.escapeHTML(value)}${childrenHTML}</h1>`;
+        const level = node.attributes?.level || "1";
+        return `<h${level}${styleAttr}>${this.escapeHTML(value)}${childrenHTML}</h${level}>`;
+      
+      case "h1":
+      case "h2":
+      case "h3":
+      case "h4":
+      case "h5":
+      case "h6":
+        return `<${name}${styleAttr}>${this.escapeHTML(value)}${childrenHTML}</${name}>`;
 
       case "button":
         const onclickAttr = onClick ? ` onclick="${onClick}()"` : "";
@@ -130,6 +139,46 @@ export class CodeGenerator {
         }
         
         return `<input ${inputAttrs} />`;
+
+      case "textarea":
+        const textareaValue = node.attributes?.value;
+        const textareaId = textareaValue ? `textarea-${textareaValue}` : `textarea-${Math.random().toString(36).substr(2, 9)}`;
+        
+        let textareaAttrs = `id="${textareaId}" placeholder="${this.escapeHTML(value)}"${styleAttr}`;
+        
+        if (textareaValue) {
+          textareaAttrs += ` data-bind="${textareaValue}"`;
+        }
+        
+        return `<textarea ${textareaAttrs}></textarea>`;
+
+      case "image":
+        const src = node.attributes?.src || value;
+        const alt = node.attributes?.alt || "Image";
+        return `<img src="${this.escapeHTML(src)}" alt="${this.escapeHTML(alt)}"${styleAttr} />`;
+
+      case "link":
+        const href = node.attributes?.href || "#";
+        const target = node.attributes?.target;
+        const targetAttr = target ? ` target="${target}"` : "";
+        return `<a href="${this.escapeHTML(href)}"${targetAttr}${styleAttr}>${this.escapeHTML(value)}${childrenHTML}</a>`;
+
+      case "row":
+        const rowStyle = styleAttr ? styleAttr.slice(0, -1) + '; display: flex; flex-direction: row; gap: 16px;"' : ' style="display: flex; flex-direction: row; gap: 16px;"';
+        return `<div${rowStyle}>${this.escapeHTML(value)}${childrenHTML}</div>`;
+      
+      case "column":
+        const colStyle = styleAttr ? styleAttr.slice(0, -1) + '; display: flex; flex-direction: column; gap: 16px;"' : ' style="display: flex; flex-direction: column; gap: 16px;"';
+        return `<div${colStyle}>${this.escapeHTML(value)}${childrenHTML}</div>`;
+      
+      case "grid":
+        const cols = node.attributes?.cols || "3";
+        const gridStyle = styleAttr ? styleAttr.slice(0, -1) + `; display: grid; grid-template-columns: repeat(${cols}, 1fr); gap: 16px;"` : ` style="display: grid; grid-template-columns: repeat(${cols}, 1fr); gap: 16px;"`;
+        return `<div${gridStyle}>${this.escapeHTML(value)}${childrenHTML}</div>`;
+      
+      case "center":
+        const centerStyle = styleAttr ? styleAttr.slice(0, -1) + '; display: flex; justify-content: center; align-items: center;"' : ' style="display: flex; justify-content: center; align-items: center;"';
+        return `<div${centerStyle}>${this.escapeHTML(value)}${childrenHTML}</div>`;
 
       case "container":
         return `<div${styleAttr}>${this.escapeHTML(value)}${childrenHTML}</div>`;
@@ -175,7 +224,7 @@ export class CodeGenerator {
     return `<div id="${instanceId}" class="frobo-component-instance">\n${childrenHTML}\n</div>`;
   }
   
-  private substitutePropValues(node: ASTNode, props: Record<string, any>): ASTNode {
+  private substitutePropValues(node: ASTNode, props: Record<string, unknown>): ASTNode {
     // Clone the node
     const newNode = { ...node };
     
@@ -496,6 +545,8 @@ export class CodeGenerator {
                 initialValue = `"${state.value}"`;
               } else if (Array.isArray(state.value)) {
                 initialValue = JSON.stringify(state.value);
+              } else if (typeof state.value === "object" && state.value !== null) {
+                initialValue = JSON.stringify(state.value);
               } else {
                 initialValue = state.value;
               }
@@ -543,8 +594,8 @@ export class CodeGenerator {
           js += `  \n`;
           
           // Add input binding setup
-          js += `  // Setup input binding\n`;
-          js += `  document.querySelectorAll('input[data-bind]').forEach(input => {\n`;
+          js += `  // Setup input and textarea binding\n`;
+          js += `  document.querySelectorAll('input[data-bind], textarea[data-bind]').forEach(input => {\n`;
           js += `    const stateKey = input.getAttribute('data-bind');\n`;
           js += `    const onChange = input.getAttribute('data-onchange');\n`;
           js += `    \n`;

@@ -322,6 +322,127 @@ function clearForm() {
   email = ""
   message = ""
 }`
+  },
+  {
+    id: 'all-elements',
+    name: 'All UI Elements',
+    description: 'Showcase of all available elements',
+    code: `component AllElements {
+  state bio = "Tell us about yourself..."
+  state website = "https://frobo.dev"
+  
+  heading "🎨 All Frobo Elements" style={
+    fontSize: "42"
+    color: "#1e293b"
+  }
+  
+  container style={ background: "#f8fafc", padding: "24", borderRadius: "12" } {
+    heading "Text Elements" style={ fontSize: "24", color: "#475569" }
+    text "Regular paragraph text"
+    heading "This is a heading"
+  }
+  
+  container style={ background: "#f8fafc", padding: "24", borderRadius: "12" } {
+    heading "Input Elements" style={ fontSize: "24", color: "#475569" }
+    input "Type here..." value=website style={ padding: "12", borderRadius: "8" }
+    text "You typed: {website}"
+    
+    textarea "Write something long..." value=bio style={
+      padding: "12"
+      borderRadius: "8"
+      width: "100%"
+      minHeight: "100"
+    }
+    text "Bio: {bio}"
+  }
+  
+  container style={ background: "#f8fafc", padding: "24", borderRadius: "12" } {
+    heading "Buttons" style={ fontSize: "24", color: "#475569" }
+    button "Primary" bg="#3b82f6" color="white" padding="12" rounded="8"
+    button "Success" bg="#10b981" color="white" padding="12" rounded="8"
+    button "Danger" bg="#ef4444" color="white" padding="12" rounded="8"
+  }
+  
+  container style={ background: "#f8fafc", padding: "24", borderRadius: "12" } {
+    heading "Images" style={ fontSize: "24", color: "#475569" }
+    image "https://via.placeholder.com/400x200/3b82f6/ffffff?text=Frobo" alt="Frobo Logo" style={
+      borderRadius: "12"
+      width: "100%"
+    }
+  }
+  
+  container style={ background: "#f8fafc", padding: "24", borderRadius: "12" } {
+    heading "Links" style={ fontSize: "24", color: "#475569" }
+    link "Visit Frobo Docs" href="https://github.com" target="_blank" style={
+      color: "#3b82f6"
+      fontSize: "18"
+      textDecoration: "underline"
+    }
+  }
+}`
+  },
+  {
+    id: 'layouts',
+    name: 'Flexbox & Grid Layouts',
+    description: 'Build responsive layouts easily',
+    code: `component LayoutDemo {
+  heading "🎨 Layout Components" style={ fontSize: "42", color: "#1e293b" }
+  
+  h2 "Row Layout (Flexbox)" style={ fontSize: "28", color: "#475569" }
+  row style={ background: "#f8fafc", padding: "20", borderRadius: "12" } {
+    container bg="#3b82f6" padding="40" rounded="8" {
+      text "Box 1" color="white" style={ fontSize: "20", fontWeight: "600" }
+    }
+    container bg="#8b5cf6" padding="40" rounded="8" {
+      text "Box 2" color="white" style={ fontSize: "20", fontWeight: "600" }
+    }
+    container bg="#10b981" padding="40" rounded="8" {
+      text "Box 3" color="white" style={ fontSize: "20", fontWeight: "600" }
+    }
+  }
+  
+  h2 "Column Layout" style={ fontSize: "28", color: "#475569" }
+  column style={ background: "#f8fafc", padding: "20", borderRadius: "12" } {
+    container bg="#ef4444" padding="20" rounded="8" {
+      text "Item 1" color="white"
+    }
+    container bg="#f59e0b" padding="20" rounded="8" {
+      text "Item 2" color="white"
+    }
+    container bg="#06b6d4" padding="20" rounded="8" {
+      text "Item 3" color="white"
+    }
+  }
+  
+  h2 "Grid Layout" style={ fontSize: "28", color: "#475569" }
+  grid cols="3" style={ background: "#f8fafc", padding: "20", borderRadius: "12" } {
+    container bg="#3b82f6" padding="30" rounded="8" {
+      text "Grid 1" color="white"
+    }
+    container bg="#8b5cf6" padding="30" rounded="8" {
+      text "Grid 2" color="white"
+    }
+    container bg="#10b981" padding="30" rounded="8" {
+      text "Grid 3" color="white"
+    }
+    container bg="#ef4444" padding="30" rounded="8" {
+      text "Grid 4" color="white"
+    }
+    container bg="#f59e0b" padding="30" rounded="8" {
+      text "Grid 5" color="white"
+    }
+    container bg="#06b6d4" padding="30" rounded="8" {
+      text "Grid 6" color="white"
+    }
+  }
+  
+  h2 "Center Layout" style={ fontSize: "28", color: "#475569" }
+  center height="200" style={ background: "#f8fafc", borderRadius: "12" } {
+    container bg="#3b82f6" padding="40" rounded="12" {
+      text "Perfectly Centered!" color="white" style={ fontSize: "24", fontWeight: "700" }
+    }
+  }
+}`
   }
 ];
 
