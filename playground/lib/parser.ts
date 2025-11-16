@@ -10,6 +10,7 @@ export enum NodeType {
     COMPUTED_DECLARATION,
     LIFECYCLE_HOOK,
     FETCH_DECLARATION,
+    WATCHER,
     PROPS_DECLARATION,
     IF_STATEMENT,
     FOR_LOOP,
@@ -137,6 +138,8 @@ export class Parser {
                 children.push(this.parseLifecycleHook());
             } else if(this.current().type === TokenType.KEYWORD && this.current().value === 'fetch') {
                 children.push(this.parseFetch());
+            } else if(this.current().type === TokenType.KEYWORD && this.current().value === 'watch') {
+                children.push(this.parseWatch());
             } else if(this.current().type === TokenType.KEYWORD && this.current().value === 'if') {
                 children.push(this.parseIfStatement());
             } else if(this.current().type === TokenType.KEYWORD && this.current().value === 'for') {
@@ -260,6 +263,83 @@ export class Parser {
             attributes
         };
     }
+    
+    private parseWatch(): ASTNode {
+        this.expect(TokenType.KEYWORD); // 'watch'
+        
+        const watchVar = this.expect(TokenType.IDENTIFIER).value;
+        
+        this.expect(TokenType.BRACE_OPEN);
+        
+        while(this.current().type === TokenType.NEWLINE) {
+            this.advance();
+        }
+        
+        const body: string[] = [];
+        
+        while(this.current().type !== TokenType.BRACE_CLOSE) {
+            if(this.current().type === TokenType.NEWLINE) {
+                body.push(';\n');
+                this.advance();
+            } else {
+                if(this.current().type === TokenType.STRING) {
+                    body.push(`"${this.current().value}"`);
+                } else {
+                    body.push(this.current().value);
+                }
+                this.advance();
+            }
+        }
+        
+        this.expect(TokenType.BRACE_CLOSE);
+        
+        return {
+            type: NodeType.WATCHER,
+            name: watchVar,
+            value: body.join(' ')
+        };
+    }
+    
+    private parseClassBinding(): Record<string, string> {
+        this.expect(TokenType.BRACE_OPEN);
+        
+        const classes: Record<string, string> = {};
+        
+        while(this.current().type === TokenType.NEWLINE) {
+            this.advance();
+        }
+        
+        while(this.current().type !== TokenType.BRACE_CLOSE) {
+            while(this.current().type === TokenType.NEWLINE) {
+                this.advance();
+            }
+            
+            if(this.current().type === TokenType.BRACE_CLOSE) {
+                break;
+            }
+            
+            const className = this.expect(TokenType.IDENTIFIER).value;
+            this.expect(TokenType.COLON);
+            const condition = this.expect(TokenType.IDENTIFIER).value;
+            
+            classes[className] = condition;
+            
+            while(this.current().type === TokenType.NEWLINE) {
+                this.advance();
+            }
+            
+            if(this.current().type === TokenType.COMMA) {
+                this.advance();
+                while(this.current().type === TokenType.NEWLINE) {
+                    this.advance();
+                }
+            }
+        }
+        
+        this.expect(TokenType.BRACE_CLOSE);
+        
+        return classes;
+    }
 
     private parseState(): ASTNode {
         this.expect(TokenType.KEYWORD);
@@ -350,7 +430,7 @@ export class Parser {
                     styles[cssProperty] = styleValue;
                 }
             }
-            // Regular attributes (onClick, props, etc.)
+            // Regular attributes (onClick, props, class, etc.)
             else if(this.peek().type === TokenType.EQUALS) {
                 this.advance(); // consume attribute name
                 this.advance(); // consume '='
@@ -367,6 +447,9 @@ export class Parser {
                     const attrValue = this.current().value;
                     this.advance();
                     attributes[attrName] = attrValue;
+                } else if(this.current().type === TokenType.BRACE_OPEN && attrName === 'class') {
+                    // Dynamic class binding: class={ active: isActive }
+                    attributes[attrName] = this.parseClassBinding();
                 }
             } else {
                 break;

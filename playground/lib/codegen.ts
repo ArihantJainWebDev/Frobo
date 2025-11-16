@@ -85,6 +85,19 @@ export class CodeGenerator {
     const onClick = node.attributes?.onClick;
     const styleAttr = node.styles ? ` style="${this.generateInlineStyles(node.styles)}"` : "";
     
+    // Handle class attribute
+    let classAttr = "";
+    const classValue = node.attributes?.class;
+    if (classValue) {
+      if (typeof classValue === 'string') {
+        classAttr = ` class="${classValue}"`;
+      } else if (typeof classValue === 'object') {
+        // Dynamic class binding
+        const elementId = `elem-${Math.random().toString(36).substr(2, 9)}`;
+        classAttr = ` id="${elementId}" data-dynamic-class='${JSON.stringify(classValue)}'`;
+      }
+    }
+    
     // Handle nested children
     let childrenHTML = "";
     if (node.children && node.children.length > 0) {
@@ -103,14 +116,14 @@ export class CodeGenerator {
             const varName = match[1];
             return `<p id="text-${varName}" data-template="${this.escapeHTML(
               value
-            )}"${styleAttr}>${this.escapeHTML(value.replace(/\{(\w+)\}/, "0"))}</p>`;
+            )}"${classAttr}${styleAttr}>${this.escapeHTML(value.replace(/\{(\w+)\}/, "0"))}</p>`;
           }
         }
-        return `<p${styleAttr}>${this.escapeHTML(value)}${childrenHTML}</p>`;
+        return `<p${classAttr}${styleAttr}>${this.escapeHTML(value)}${childrenHTML}</p>`;
 
       case "heading":
         const level = node.attributes?.level || "1";
-        return `<h${level}${styleAttr}>${this.escapeHTML(value)}${childrenHTML}</h${level}>`;
+        return `<h${level}${classAttr}${styleAttr}>${this.escapeHTML(value)}${childrenHTML}</h${level}>`;
       
       case "h1":
       case "h2":
@@ -118,11 +131,11 @@ export class CodeGenerator {
       case "h4":
       case "h5":
       case "h6":
-        return `<${name}${styleAttr}>${this.escapeHTML(value)}${childrenHTML}</${name}>`;
+        return `<${name}${classAttr}${styleAttr}>${this.escapeHTML(value)}${childrenHTML}</${name}>`;
 
       case "button":
         const onclickAttr = onClick ? ` onclick="${onClick}()"` : "";
-        return `<button${onclickAttr}${styleAttr}>${this.escapeHTML(value)}${childrenHTML}</button>`;
+        return `<button${onclickAttr}${classAttr}${styleAttr}>${this.escapeHTML(value)}${childrenHTML}</button>`;
 
       case "input":
         const inputValue = node.attributes?.value;
@@ -423,16 +436,30 @@ export class CodeGenerator {
   updateQueue: new Set(),
   updateScheduled: false,
   
+  watchers: {},
+  
   createState(initialState) {
     const self = this;
     this.state = new Proxy(initialState, {
-      set: (target, property, value) => {
+      set: (target, property, value) {
+        const oldValue = target[property];
         target[property] = value;
         self.scheduleUpdate(property);
+        // Trigger watchers
+        if (self.watchers[property]) {
+          self.watchers[property].forEach(callback => callback(value, oldValue));
+        }
         return true;
       }
     });
     return this.state;
+  },
+  
+  addWatcher(stateKey, callback) {
+    if (!this.watchers[stateKey]) {
+      this.watchers[stateKey] = [];
+    }
+    this.watchers[stateKey].push(callback);
   },
   
   watch(stateKey, element) {
@@ -608,6 +635,53 @@ export class CodeGenerator {
           js += "\n";
           js += `// Register reactive elements\n`;
           js += `window.addEventListener('DOMContentLoaded', () => {\n`;
+          
+          // Setup dynamic classes
+          js += `  // Setup dynamic classes\n`;
+          js += `  document.querySelectorAll('[data-dynamic-class]').forEach(el => {\n`;
+          js += `    const classMap = JSON.parse(el.getAttribute('data-dynamic-class'));\n`;
+          js += `    const updateClasses = () => {\n`;
+          js += `      Object.entries(classMap).forEach(([className, condition]) => {\n`;
+          js += `        if (state[condition]) {\n`;
+          js += `          el.classList.add(className);\n`;
+          js += `        } else {\n`;
+          js += `          el.classList.remove(className);\n`;
+          js += `        }\n`;
+          js += `      });\n`;
+          js += `    };\n`;
+          js += `    updateClasses();\n`;
+          js += `    Object.keys(classMap).forEach(className => {\n`;
+          js += `      const condition = classMap[className];\n`;
+          js += `      Frobo.addWatcher(condition, updateClasses);\n`;
+          js += `    });\n`;
+          js += `  });\n`;
+          js += `  \n`;
+          
+          // Add watchers
+          const watchers = component.children.filter(
+            (child) => child.type === NodeType.WATCHER
+          );
+          
+          if (watchers.length > 0) {
+            js += `  // Setup watchers\n`;
+            watchers.forEach(watcher => {
+              let watcherBody = watcher.value;
+              // Replace state references
+              states.forEach((state) => {
+                watcherBody = watcherBody.replace(
+                  new RegExp(`\\b${state.name}\\s*=`, "g"),
+                  `state.${state.name} =`
+                );
+                watcherBody = watcherBody.replace(
+                  new RegExp(`\\b${state.name}\\b(?!\\s*=)`, "g"),
+                  `state.${state.name}`
+                );
+              });
+              js += `  Frobo.addWatcher('${watcher.name}', (newVal, oldVal) => {\n`;
+              js += `    ${watcherBody}\n`;
+              js += `  });\n`;
+            });
+          }
           
           // Add fetch calls
           if (fetches.length > 0) {

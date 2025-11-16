@@ -239,7 +239,7 @@ export class Lexer {
             this.advance();
         }
 
-        const keywords = ['component', 'state', 'computed', 'function', 'if', 'else', 'for', 'in', 'props', 'onMount', 'onUpdate', 'fetch'];
+        const keywords = ['component', 'state', 'computed', 'function', 'if', 'else', 'for', 'in', 'props', 'onMount', 'onUpdate', 'fetch', 'watch'];
         const type = keywords.includes(value) ? TokenType.KEYWORD : TokenType.IDENTIFIER;
 
         return {

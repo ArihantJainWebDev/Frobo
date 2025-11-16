@@ -538,6 +538,155 @@ function birthday() {
     }
   }
 }`
+  },
+  {
+    id: 'watchers',
+    name: 'Watchers & Reactivity',
+    description: 'React to state changes with watchers',
+    code: `component WatcherDemo {
+  state count = 0
+  state message = "Click the button!"
+  state history = []
+  
+  watch count {
+    console.log("Count changed to:", count)
+    if count > 5 {
+      message = "Count is getting high!"
+    }
+    if count > 10 {
+      message = "Wow, that's a lot!"
+    }
+    if count == 0 {
+      message = "Back to zero!"
+    }
+  }
+  
+  h1 "Watcher Demo" style={ fontSize: "36", color: "#1e293b" }
+  
+  container bg="#f8fafc" padding="24" rounded="12" {
+    h2 "Counter" style={ fontSize: "24", color: "#475569" }
+    text "Count: {count}" style={ fontSize: "32", fontWeight: "700", color: "#3b82f6" }
+    text "Message: {message}" style={ fontSize: "18", color: "#64748b" }
+    
+    row {
+      button "Increment" onClick=increment bg="#10b981" color="white" padding="12" rounded="8"
+      button "Decrement" onClick=decrement bg="#ef4444" color="white" padding="12" rounded="8"
+      button "Reset" onClick=reset bg="#64748b" color="white" padding="12" rounded="8"
+    }
+  }
+  
+  container bg="#dbeafe" padding="24" rounded="12" {
+    h2 "How Watchers Work" style={ fontSize: "24", color: "#1e40af" }
+    text "Watchers run automatically when state changes" style={ color: "#3b82f6" }
+    text "Check the console to see watcher logs!" style={ color: "#3b82f6" }
+    text "The message above updates based on count value" style={ color: "#3b82f6" }
+  }
+}
+
+function increment() {
+  count = count + 1
+}
+
+function decrement() {
+  count = count - 1
+}
+
+function reset() {
+  count = 0
+}`
+  },
+  {
+    id: 'complete-app',
+    name: 'Complete App (All Features)',
+    description: 'Showcase of every Frobo feature',
+    code: `component CompleteApp {
+  state isActive = false
+  state count = 0
+  state username = ""
+  state users = []
+  state loading = false
+  
+  computed doubleCount = count * 2
+  computed greeting = "Hello, " + username + "!"
+  
+  watch count {
+    console.log("Count is now:", count)
+  }
+  
+  fetch url="https://jsonplaceholder.typicode.com/users" into=users loading=loading
+  
+  onMount {
+    console.log("App mounted!")
+  }
+  
+  h1 "🎉 Complete Frobo App" style={ fontSize: "42", color: "#1e293b", textAlign: "center" }
+  
+  row gap="20" {
+    column style={ flex: "1" } {
+      container bg="#f8fafc" padding="24" rounded="12" {
+        h2 "State & Input" style={ fontSize: "24", color: "#475569" }
+        input "Enter your name" value=username style={ padding: "12", borderRadius: "8" }
+        text "{greeting}" style={ fontSize: "20", color: "#3b82f6" }
+      }
+      
+      container bg="#f8fafc" padding="24" rounded="12" {
+        h2 "Counter & Computed" style={ fontSize: "24", color: "#475569" }
+        text "Count: {count}" style={ fontSize: "24" }
+        text "Double: {doubleCount}" style={ fontSize: "20", color: "#8b5cf6" }
+        
+        row {
+          button "+" onClick=increment bg="#10b981" color="white" padding="12" rounded="8"
+          button "-" onClick=decrement bg="#ef4444" color="white" padding="12" rounded="8"
+        }
+      }
+    }
+    
+    column style={ flex: "1" } {
+      container bg="#f8fafc" padding="24" rounded="12" {
+        h2 "Dynamic Classes" style={ fontSize: "24", color: "#475569" }
+        button "Toggle Active" onClick=toggleActive bg="#3b82f6" color="white" padding="12" rounded="8"
+        
+        container class={ active: isActive } style={
+          padding: "20"
+          borderRadius: "8"
+          marginTop: "12"
+          background: "#e2e8f0"
+        } {
+          text "This box has dynamic classes!" style={ fontSize: "16" }
+          text "Active state: {isActive}" style={ fontSize: "14", color: "#64748b" }
+        }
+      }
+      
+      container bg="#f8fafc" padding="24" rounded="12" {
+        h2 "API Data" style={ fontSize: "24", color: "#475569" }
+        
+        if loading == true {
+          text "Loading..." style={ color: "#3b82f6" }
+        }
+        
+        if loading == false {
+          text "✅ Data loaded!" style={ color: "#10b981", fontWeight: "600" }
+        }
+      }
+    }
+  }
+  
+  center height="100" bg="#1e293b" rounded="12" {
+    text "Frobo: 100% Complete Framework! 🚀" color="white" style={ fontSize: "24", fontWeight: "700" }
+  }
+}
+
+function increment() {
+  count = count + 1
+}
+
+function decrement() {
+  count = count - 1
+}
+
+function toggleActive() {
+  isActive = !isActive
+}`
   }
 ];
 
