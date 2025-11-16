@@ -576,6 +576,30 @@ export class CodeGenerator {
             });
           }
           
+          // Add fetch declarations
+          const fetches = component.children.filter(
+            (child) => child.type === NodeType.FETCH_DECLARATION
+          );
+          
+          if (fetches.length > 0) {
+            js += "\n// Fetch helper function\n";
+            js += `async function froboFetch(url, intoVar, loadingVar, errorVar) {\n`;
+            js += `  if (loadingVar) state[loadingVar] = true;\n`;
+            js += `  if (errorVar) state[errorVar] = null;\n`;
+            js += `  try {\n`;
+            js += `    const response = await fetch(url);\n`;
+            js += `    const data = await response.json();\n`;
+            js += `    if (intoVar) state[intoVar] = data;\n`;
+            js += `    if (loadingVar) state[loadingVar] = false;\n`;
+            js += `    return data;\n`;
+            js += `  } catch (error) {\n`;
+            js += `    if (errorVar) state[errorVar] = error.message;\n`;
+            js += `    if (loadingVar) state[loadingVar] = false;\n`;
+            js += `    console.error('Fetch error:', error);\n`;
+            js += `  }\n`;
+            js += `}\n`;
+          }
+          
           // Add lifecycle hooks
           const hooks = component.children.filter(
             (child) => child.type === NodeType.LIFECYCLE_HOOK
@@ -584,6 +608,18 @@ export class CodeGenerator {
           js += "\n";
           js += `// Register reactive elements\n`;
           js += `window.addEventListener('DOMContentLoaded', () => {\n`;
+          
+          // Add fetch calls
+          if (fetches.length > 0) {
+            js += `  // Fetch data\n`;
+            fetches.forEach(fetchNode => {
+              const url = fetchNode.attributes?.url || '';
+              const into = fetchNode.attributes?.into || null;
+              const loading = fetchNode.attributes?.loading || null;
+              const error = fetchNode.attributes?.error || null;
+              js += `  froboFetch("${url}", "${into}", "${loading}", "${error}");\n`;
+            });
+          }
           
           // Add onMount hooks
           const onMountHooks = hooks.filter(h => h.name === 'onMount');

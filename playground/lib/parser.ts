@@ -9,6 +9,7 @@ export enum NodeType {
     STATE_DECLARATION,
     COMPUTED_DECLARATION,
     LIFECYCLE_HOOK,
+    FETCH_DECLARATION,
     PROPS_DECLARATION,
     IF_STATEMENT,
     FOR_LOOP,
@@ -134,6 +135,8 @@ export class Parser {
                 children.push(this.parseComputed());
             } else if(this.current().type === TokenType.KEYWORD && (this.current().value === 'onMount' || this.current().value === 'onUpdate')) {
                 children.push(this.parseLifecycleHook());
+            } else if(this.current().type === TokenType.KEYWORD && this.current().value === 'fetch') {
+                children.push(this.parseFetch());
             } else if(this.current().type === TokenType.KEYWORD && this.current().value === 'if') {
                 children.push(this.parseIfStatement());
             } else if(this.current().type === TokenType.KEYWORD && this.current().value === 'for') {
@@ -229,6 +232,32 @@ export class Parser {
             type: NodeType.LIFECYCLE_HOOK,
             name: hookName,
             value: body.join(' ')
+        };
+    }
+    
+    private parseFetch(): ASTNode {
+        this.expect(TokenType.KEYWORD); // 'fetch'
+        
+        const attributes: Record<string, any> = {};
+        
+        // Parse attributes: url, into, loading, error
+        while(this.current().type === TokenType.IDENTIFIER && this.peek().type === TokenType.EQUALS) {
+            const attrName = this.current().value;
+            this.advance(); // consume attribute name
+            this.advance(); // consume '='
+            
+            if(this.current().type === TokenType.STRING) {
+                attributes[attrName] = this.current().value;
+                this.advance();
+            } else if(this.current().type === TokenType.IDENTIFIER) {
+                attributes[attrName] = this.current().value;
+                this.advance();
+            }
+        }
+        
+        return {
+            type: NodeType.FETCH_DECLARATION,
+            attributes
         };
     }
 
@@ -624,7 +653,7 @@ export class Parser {
     private parseObjectLiteral(): Record<string, any> {
         this.expect(TokenType.BRACE_OPEN);
 
-        const obj: Record<string, any> = {};
+        const obj: Record<string, unknown> = {};
 
         while(this.current().type === TokenType.NEWLINE) {
             this.advance();

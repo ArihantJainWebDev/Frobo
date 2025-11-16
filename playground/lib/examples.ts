@@ -489,6 +489,55 @@ function clearForm() {
 function birthday() {
   age = age + 1
 }`
+  },
+  {
+    id: 'api-fetch',
+    name: 'API & Data Fetching',
+    description: 'Fetch data from APIs with loading states',
+    code: `component UserList {
+  state users = []
+  state loading = true
+  state error = null
+  
+  fetch url="https://jsonplaceholder.typicode.com/users" into=users loading=loading error=error
+  
+  h1 "User Directory" style={ fontSize: "36", color: "#1e293b" }
+  
+  if loading == true {
+    container bg="#dbeafe" padding="24" rounded="12" {
+      text "Loading users..." style={ fontSize: "20", color: "#3b82f6" }
+    }
+  }
+  
+  if error != null {
+    container bg="#fee2e2" padding="24" rounded="12" {
+      text "Error: {error}" style={ fontSize: "18", color: "#ef4444" }
+    }
+  }
+  
+  if loading == false {
+    h2 "Users Loaded!" style={ fontSize: "24", color: "#10b981" }
+    
+    grid cols="2" style={ marginTop: "20" } {
+      container bg="#f8fafc" padding="20" rounded="12" {
+        h3 "User 1" style={ fontSize: "20", color: "#1e293b" }
+        text "Data fetched from API"
+      }
+      container bg="#f8fafc" padding="20" rounded="12" {
+        h3 "User 2" style={ fontSize: "20", color: "#1e293b" }
+        text "Real-time data loading"
+      }
+      container bg="#f8fafc" padding="20" rounded="12" {
+        h3 "User 3" style={ fontSize: "20", color: "#1e293b" }
+        text "Automatic state management"
+      }
+      container bg="#f8fafc" padding="20" rounded="12" {
+        h3 "User 4" style={ fontSize: "20", color: "#1e293b" }
+        text "Error handling built-in"
+      }
+    }
+  }
+}`
   }
 ];
 
