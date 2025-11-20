@@ -1,0 +1,39 @@
+component AccessControl {
+  state isLoggedIn = true
+  state hasPermission = true
+  state isBlocked = false
+  state age = 25
+  state hasLicense = true
+  
+  heading "Access Control Demo"
+  
+  text "User Status:"
+  
+  if isLoggedIn && hasPermission && !isBlocked {
+    text "✓ Full access granted"
+  } else if isLoggedIn && !hasPermission {
+    text "⚠ Limited access - missing permissions"
+  } else if !isLoggedIn {
+    text "✗ Please log in"
+  } else {
+    text "✗ Access denied - account blocked"
+  }
+  
+  text "Driving Status:"
+  
+  if age >= 18 && hasLicense {
+    text "✓ Can drive"
+  } else if age >= 18 && !hasLicense {
+    text "⚠ Need to get a license"
+  } else {
+    text "✗ Too young to drive"
+  }
+  
+  text "Complex Logic:"
+  
+  if (isLoggedIn && hasPermission) || age >= 21 {
+    text "✓ Can access premium content"
+  } else {
+    text "✗ Premium content restricted"
+  }
+}

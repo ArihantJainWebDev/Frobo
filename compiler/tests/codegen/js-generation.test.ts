@@ -58,4 +58,52 @@ describe('CodeGenerator - JavaScript Generation', () => {
 
     expect(output.js).toContain('DOMContentLoaded');
   });
+
+  it('should generate JS for if-else-if-else conditionals', () => {
+    const code = `component App {
+      state score = 85
+      
+      if score > 90 {
+        text "Grade: A"
+      } else if score > 80 {
+        text "Grade: B"
+      } else if score > 70 {
+        text "Grade: C"
+      } else {
+        text "Grade: F"
+      }
+    }`;
+    const output = compile(code);
+
+    // Should have setupConditionals function
+    expect(output.js).toContain('setupConditionals');
+    
+    // Should handle multiple else-if blocks
+    expect(output.js).toContain('elseIfBlocks');
+    
+    // Should evaluate conditions in order
+    expect(output.js).toContain('for (let j = 0; j < elseIfBlocks.length; j++)');
+    
+    // Should show else block if no conditions match
+    expect(output.js).toContain('If no conditions matched, show else block');
+  });
+
+  it('should generate JS for if-else-if without else', () => {
+    const code = `component App {
+      state value = 5
+      
+      if value > 10 {
+        text "Large"
+      } else if value > 5 {
+        text "Medium"
+      }
+    }`;
+    const output = compile(code);
+
+    // Should have setupConditionals function
+    expect(output.js).toContain('setupConditionals');
+    
+    // Should handle else-if blocks
+    expect(output.js).toContain('elseIfBlocks');
+  });
 });

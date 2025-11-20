@@ -1,0 +1,23 @@
+component GradeCalculator {
+  state score = 85
+  
+  heading "Grade Calculator"
+  text "Score: {score}"
+  
+  if score >= 90 {
+    text "Grade: A - Excellent work!"
+    text "You're at the top of the class."
+  } else if score >= 80 {
+    text "Grade: B - Good job!"
+    text "Keep up the good work."
+  } else if score >= 70 {
+    text "Grade: C - Satisfactory"
+    text "There's room for improvement."
+  } else if score >= 60 {
+    text "Grade: D - Needs improvement"
+    text "Consider getting extra help."
+  } else {
+    text "Grade: F - Failed"
+    text "Please see your instructor."
+  }
+}

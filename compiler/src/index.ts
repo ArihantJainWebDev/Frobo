@@ -1,15 +1,15 @@
-import { Lexer } from './lexer';
-import { Parser } from './parser';
-import { CodeGenerator } from './codegen';
+import { Lexer } from './lexer.js';
+import { Parser } from './parser.js';
+import { CodeGenerator } from './codegen.js';
 
-export { Lexer, TokenType } from './lexer';
-export type { Token } from './lexer';
+export { Lexer, TokenType } from './lexer.js';
+export type { Token } from './lexer.js';
 
-export { Parser, NodeType } from './parser';
-export type { ASTNode } from './parser';
+export { Parser, NodeType } from './parser.js';
+export type { ASTNode } from './parser.js';
 
-export { CodeGenerator } from './codegen';
-export type { CompiledOutput } from './codegen';
+export { CodeGenerator } from './codegen.js';
+export type { CompiledOutput } from './codegen.js';
 
 // Convenience function to compile Frobo code
 export function compile(code: string) {
