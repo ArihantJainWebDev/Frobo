@@ -110,7 +110,7 @@ export class CodeGenerator {
 
     switch (name) {
       case "text":
-        if (value.includes("{") && value.includes("}")) {
+        if (typeof value === 'string' && value.includes("{") && value.includes("}")) {
           // Extract all variable names from the template
           const matches = value.match(/\{(\w+)\}/g);
           if (matches) {
@@ -122,11 +122,11 @@ export class CodeGenerator {
             )}" data-vars="${varNames.join(',')}"${classAttr}${styleAttr}>${this.escapeHTML(value)}</p>`;
           }
         }
-        return `<p${classAttr}${styleAttr}>${this.escapeHTML(value)}${childrenHTML}</p>`;
+        return `<p${classAttr}${styleAttr}>${this.escapeHTML(String(value))}${childrenHTML}</p>`;
 
       case "heading":
         const level = node.attributes?.level || "1";
-        return `<h${level}${classAttr}${styleAttr}>${this.escapeHTML(value)}${childrenHTML}</h${level}>`;
+        return `<h${level}${classAttr}${styleAttr}>${this.escapeHTML(String(value))}${childrenHTML}</h${level}>`;
       
       case "h1":
       case "h2":
@@ -134,36 +134,36 @@ export class CodeGenerator {
       case "h4":
       case "h5":
       case "h6":
-        return `<${name}${classAttr}${styleAttr}>${this.escapeHTML(value)}${childrenHTML}</${name}>`;
+        return `<${name}${classAttr}${styleAttr}>${this.escapeHTML(String(value))}${childrenHTML}</${name}>`;
 
       case "button":
-        const onclickAttr = onClick ? ` onclick="${onClick}()"` : "";
-        return `<button${onclickAttr}${classAttr}${styleAttr}>${this.escapeHTML(value)}${childrenHTML}</button>`;
+        const onclickAttr = onClick ? ` onclick="${String(onClick)}()"` : "";
+        return `<button${onclickAttr}${classAttr}${styleAttr}>${this.escapeHTML(String(value))}${childrenHTML}</button>`;
 
       case "input":
         const inputValue = node.attributes?.value;
         const onChange = node.attributes?.onChange;
-        const inputId = inputValue ? `input-${inputValue}` : `input-${Math.random().toString(36).substr(2, 9)}`;
+        const inputId = inputValue ? `input-${String(inputValue)}` : `input-${Math.random().toString(36).substr(2, 9)}`;
         
-        let inputAttrs = `type="text" id="${inputId}" placeholder="${this.escapeHTML(value)}"${styleAttr}`;
+        let inputAttrs = `type="text" id="${inputId}" placeholder="${this.escapeHTML(String(value))}"${styleAttr}`;
         
         if (inputValue) {
-          inputAttrs += ` data-bind="${inputValue}"`;
+          inputAttrs += ` data-bind="${String(inputValue)}"`;
         }
         if (onChange) {
-          inputAttrs += ` data-onchange="${onChange}"`;
+          inputAttrs += ` data-onchange="${String(onChange)}"`;
         }
         
         return `<input ${inputAttrs} />`;
 
       case "textarea":
         const textareaValue = node.attributes?.value;
-        const textareaId = textareaValue ? `textarea-${textareaValue}` : `textarea-${Math.random().toString(36).substr(2, 9)}`;
+        const textareaId = textareaValue ? `textarea-${String(textareaValue)}` : `textarea-${Math.random().toString(36).substr(2, 9)}`;
         
-        let textareaAttrs = `id="${textareaId}" placeholder="${this.escapeHTML(value)}"${styleAttr}`;
+        let textareaAttrs = `id="${textareaId}" placeholder="${this.escapeHTML(String(value))}"${styleAttr}`;
         
         if (textareaValue) {
-          textareaAttrs += ` data-bind="${textareaValue}"`;
+          textareaAttrs += ` data-bind="${String(textareaValue)}"`;
         }
         
         return `<textarea ${textareaAttrs}></textarea>`;
@@ -171,36 +171,36 @@ export class CodeGenerator {
       case "image":
         const src = node.attributes?.src || value;
         const alt = node.attributes?.alt || "Image";
-        return `<img src="${this.escapeHTML(src)}" alt="${this.escapeHTML(alt)}"${styleAttr} />`;
+        return `<img src="${this.escapeHTML(String(src))}" alt="${this.escapeHTML(String(alt))}"${styleAttr} />`;
 
       case "link":
         const href = node.attributes?.href || "#";
         const target = node.attributes?.target;
-        const targetAttr = target ? ` target="${target}"` : "";
-        return `<a href="${this.escapeHTML(href)}"${targetAttr}${styleAttr}>${this.escapeHTML(value)}${childrenHTML}</a>`;
+        const targetAttr = target ? ` target="${String(target)}"` : "";
+        return `<a href="${this.escapeHTML(String(href))}"${targetAttr}${styleAttr}>${this.escapeHTML(String(value))}${childrenHTML}</a>`;
 
       case "row":
         const rowStyle = styleAttr ? styleAttr.slice(0, -1) + '; display: flex; flex-direction: row; gap: 16px;"' : ' style="display: flex; flex-direction: row; gap: 16px;"';
-        return `<div${rowStyle}>${this.escapeHTML(value)}${childrenHTML}</div>`;
+        return `<div${rowStyle}>${this.escapeHTML(String(value))}${childrenHTML}</div>`;
       
       case "column":
         const colStyle = styleAttr ? styleAttr.slice(0, -1) + '; display: flex; flex-direction: column; gap: 16px;"' : ' style="display: flex; flex-direction: column; gap: 16px;"';
-        return `<div${colStyle}>${this.escapeHTML(value)}${childrenHTML}</div>`;
+        return `<div${colStyle}>${this.escapeHTML(String(value))}${childrenHTML}</div>`;
       
       case "grid":
         const cols = node.attributes?.cols || "3";
-        const gridStyle = styleAttr ? styleAttr.slice(0, -1) + `; display: grid; grid-template-columns: repeat(${cols}, 1fr); gap: 16px;"` : ` style="display: grid; grid-template-columns: repeat(${cols}, 1fr); gap: 16px;"`;
-        return `<div${gridStyle}>${this.escapeHTML(value)}${childrenHTML}</div>`;
+        const gridStyle = styleAttr ? styleAttr.slice(0, -1) + `; display: grid; grid-template-columns: repeat(${String(cols)}, 1fr); gap: 16px;"` : ` style="display: grid; grid-template-columns: repeat(${String(cols)}, 1fr); gap: 16px;"`;
+        return `<div${gridStyle}>${this.escapeHTML(String(value))}${childrenHTML}</div>`;
       
       case "center":
         const centerStyle = styleAttr ? styleAttr.slice(0, -1) + '; display: flex; justify-content: center; align-items: center;"' : ' style="display: flex; justify-content: center; align-items: center;"';
-        return `<div${centerStyle}>${this.escapeHTML(value)}${childrenHTML}</div>`;
+        return `<div${centerStyle}>${this.escapeHTML(String(value))}${childrenHTML}</div>`;
 
       case "container":
-        return `<div${styleAttr}>${this.escapeHTML(value)}${childrenHTML}</div>`;
+        return `<div${styleAttr}>${this.escapeHTML(String(value))}${childrenHTML}</div>`;
 
       default:
-        return `<div${styleAttr}>${this.escapeHTML(value)}${childrenHTML}</div>`;
+        return `<div${styleAttr}>${this.escapeHTML(String(value))}${childrenHTML}</div>`;
     }
   }
   
@@ -247,7 +247,9 @@ export class CodeGenerator {
     // Substitute props in value
     if (newNode.value && typeof newNode.value === 'string') {
       Object.entries(props).forEach(([propName, propValue]) => {
-        newNode.value = newNode.value.replace(new RegExp(`\\{${propName}\\}`, 'g'), String(propValue));
+        if (typeof newNode.value === 'string') {
+          newNode.value = newNode.value.replace(new RegExp(`\\{${propName}\\}`, 'g'), String(propValue));
+        }
       });
     }
     
@@ -335,7 +337,7 @@ export class CodeGenerator {
   private generateLoopItemHTML(node: ASTNode, itemName: string): string {
     if (node.type === NodeType.ELEMENT) {
       const name = node.name || "div";
-      let value = node.value || "";
+      let value = String(node.value || "");
       
       // Replace {item} with placeholder for loop item
       value = value.replace(new RegExp(`\\{${itemName}\\}`, 'g'), `{{LOOP_ITEM}}`);
@@ -348,7 +350,7 @@ export class CodeGenerator {
         case "heading":
           return `<h1 class="loop-item">${this.escapeHTML(value)}</h1>`;
         case "button":
-          const onclickAttr = onClick ? ` onclick="${onClick}()"` : "";
+          const onclickAttr = onClick ? ` onclick="${String(onClick)}()"` : "";
           return `<button class="loop-item"${onclickAttr}>${this.escapeHTML(value)}</button>`;
         case "input":
           return `<input class="loop-item" type="text" placeholder="${this.escapeHTML(value)}" />`;
@@ -571,6 +573,86 @@ export class CodeGenerator {
   }
 };\n\n`;
 
+    // Collect all states and computed properties from all components
+    const allStates: ASTNode[] = [];
+    const allComputed: ASTNode[] = [];
+    components.forEach((component) => {
+      if (component.children) {
+        const states = component.children.filter(
+          (child) => child.type === NodeType.STATE_DECLARATION
+        );
+        const computed = component.children.filter(
+          (child) => child.type === NodeType.COMPUTED_DECLARATION
+        );
+        allStates.push(...states);
+        allComputed.push(...computed);
+      }
+    });
+
+    // Initialize state in global scope (BEFORE DOMContentLoaded)
+    if (allStates.length > 0) {
+      js += `// Initialize state\n`;
+
+      const stateObj = allStates
+        .map((state) => {
+          let initialValue;
+          if (typeof state.value === "string") {
+            initialValue = `"${state.value}"`;
+          } else if (Array.isArray(state.value)) {
+            initialValue = JSON.stringify(state.value);
+          } else if (typeof state.value === "object" && state.value !== null) {
+            initialValue = JSON.stringify(state.value);
+          } else {
+            initialValue = state.value;
+          }
+          return `${state.name}: ${initialValue}`;
+        })
+        .join(", ");
+
+      js += `const state = Frobo.createState({ ${stateObj} });\n`;
+
+      allStates.forEach((state) => {
+        js += `let ${state.name} = state.${state.name};\n`;
+      });
+      js += `\n`;
+    }
+
+    // Add computed properties in global scope
+    if (allComputed.length > 0) {
+      js += "// Computed properties\n";
+      allComputed.forEach((comp) => {
+        // Replace state variable references in computed expressions
+        // But preserve string literals and other computed properties
+        let computedValue = String(comp.value || '');
+        
+        // First, replace state variables (but not computed properties)
+        allStates.forEach((state) => {
+          if (typeof state.name === 'string') {
+            computedValue = computedValue.replace(
+              new RegExp(`\\b${state.name}\\b`, "g"),
+              `state.${state.name}`
+            );
+          }
+        });
+        
+        // Then, replace references to other computed properties with state.computedName
+        allComputed.forEach((otherComp) => {
+          if (typeof otherComp.name === 'string' && typeof comp.name === 'string' && otherComp.name !== comp.name) {
+            computedValue = computedValue.replace(
+              new RegExp(`\\b${otherComp.name}\\b`, "g"),
+              `state.${otherComp.name}`
+            );
+          }
+        });
+        
+        js += `Object.defineProperty(state, '${comp.name}', {\n`;
+        js += `  get() { return ${computedValue}; },\n`;
+        js += `  enumerable: true\n`;
+        js += `});\n`;
+      });
+      js += `\n`;
+    }
+
     components.forEach((component) => {
       if (component.children) {
         const states = component.children.filter(
@@ -578,45 +660,6 @@ export class CodeGenerator {
         );
 
         if (states.length > 0) {
-          js += `// Initialize state\n`;
-
-          const stateObj = states
-            .map((state) => {
-              let initialValue;
-              if (typeof state.value === "string") {
-                initialValue = `"${state.value}"`;
-              } else if (Array.isArray(state.value)) {
-                initialValue = JSON.stringify(state.value);
-              } else if (typeof state.value === "object" && state.value !== null) {
-                initialValue = JSON.stringify(state.value);
-              } else {
-                initialValue = state.value;
-              }
-              return `${state.name}: ${initialValue}`;
-            })
-            .join(", ");
-
-          js += `const state = Frobo.createState({ ${stateObj} });\n`;
-
-          states.forEach((state) => {
-            js += `let ${state.name} = state.${state.name};\n`;
-          });
-          
-          // Add computed properties
-          const computed = component.children.filter(
-            (child) => child.type === NodeType.COMPUTED_DECLARATION
-          );
-          
-          if (computed.length > 0) {
-            js += "\n// Computed properties\n";
-            computed.forEach((comp) => {
-              js += `Object.defineProperty(state, '${comp.name}', {\n`;
-              js += `  get() { return ${comp.value}; },\n`;
-              js += `  enumerable: true\n`;
-              js += `});\n`;
-              js += `let ${comp.name} = state.${comp.name};\n`;
-            });
-          }
           
           // Add fetch declarations
           const fetches = component.children.filter(
@@ -680,17 +723,19 @@ export class CodeGenerator {
           if (watchers.length > 0) {
             js += `  // Setup watchers\n`;
             watchers.forEach(watcher => {
-              let watcherBody = watcher.value;
-              // Replace state references
-              states.forEach((state) => {
-                watcherBody = watcherBody.replace(
-                  new RegExp(`\\b${state.name}\\s*=`, "g"),
-                  `state.${state.name} =`
-                );
-                watcherBody = watcherBody.replace(
-                  new RegExp(`\\b${state.name}\\b(?!\\s*=)`, "g"),
-                  `state.${state.name}`
-                );
+              let watcherBody = String(watcher.value || '');
+              // Replace state references using allStates
+              allStates.forEach((state) => {
+                if (typeof state.name === 'string') {
+                  watcherBody = watcherBody.replace(
+                    new RegExp(`\\b${state.name}\\s*=`, "g"),
+                    `state.${state.name} =`
+                  );
+                  watcherBody = watcherBody.replace(
+                    new RegExp(`\\b${state.name}\\b(?!\\s*=)`, "g"),
+                    `state.${state.name}`
+                  );
+                }
               });
               js += `  Frobo.addWatcher('${watcher.name}', (newVal, oldVal) => {\n`;
               js += `    ${watcherBody}\n`;
@@ -715,17 +760,19 @@ export class CodeGenerator {
           if (onMountHooks.length > 0) {
             js += `  // onMount lifecycle\n`;
             onMountHooks.forEach(hook => {
-              let hookBody = hook.value;
-              // Replace state references
-              states.forEach((state) => {
-                hookBody = hookBody.replace(
-                  new RegExp(`\\b${state.name}\\s*=`, "g"),
-                  `state.${state.name} =`
-                );
-                hookBody = hookBody.replace(
-                  new RegExp(`\\b${state.name}\\b(?!\\s*=)`, "g"),
-                  `state.${state.name}`
-                );
+              let hookBody = String(hook.value || '');
+              // Replace state references using allStates
+              allStates.forEach((state) => {
+                if (typeof state.name === 'string') {
+                  hookBody = hookBody.replace(
+                    new RegExp(`\\b${state.name}\\s*=`, "g"),
+                    `state.${state.name} =`
+                  );
+                  hookBody = hookBody.replace(
+                    new RegExp(`\\b${state.name}\\b(?!\\s*=)`, "g"),
+                    `state.${state.name}`
+                  );
+                }
               });
               js += `  ${hookBody}\n`;
             });
@@ -834,7 +881,7 @@ export class CodeGenerator {
     functions.forEach((func) => {
       js += `function ${func.name}() {\n`;
 
-      let body = func.value;
+      let body = String(func.value || '');
 
       components.forEach((component) => {
         if (component.children) {
@@ -842,14 +889,16 @@ export class CodeGenerator {
             (child) => child.type === NodeType.STATE_DECLARATION
           );
           states.forEach((state) => {
-            body = body.replace(
-              new RegExp(`\\b${state.name}\\s*=`, "g"),
-              `state.${state.name} =`
-            );
-            body = body.replace(
-              new RegExp(`\\b${state.name}\\b(?!\\s*=)`, "g"),
-              `state.${state.name}`
-            );
+            if (typeof state.name === 'string') {
+              body = body.replace(
+                new RegExp(`\\b${state.name}\\s*=`, "g"),
+                `state.${state.name} =`
+              );
+              body = body.replace(
+                new RegExp(`\\b${state.name}\\b(?!\\s*=)`, "g"),
+                `state.${state.name}`
+              );
+            }
           });
         }
       });

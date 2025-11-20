@@ -14,6 +14,7 @@ export enum TokenType {
     LESS_EQUAL,
     EQUAL_EQUAL,
     NOT_EQUAL,
+    NOT,
     BRACE_OPEN,
     BRACE_CLOSE,
     BRACKET_OPEN,
@@ -128,7 +129,7 @@ export class Lexer {
                     this.advance();
                     return this.makeToken(TokenType.NOT_EQUAL, '!=');
                 }
-                break;
+                return this.makeToken(TokenType.NOT, '!');
         }
 
         throw new Error(`Unexpected character '${char} at line ${this.line}, column ${this.column}`);

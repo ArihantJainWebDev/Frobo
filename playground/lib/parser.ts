@@ -22,10 +22,10 @@ export enum NodeType {
 
 export interface ASTNode {
     type: NodeType;
-    value?: any;
+    value?: unknown;
     name?: string;
     children?: ASTNode[];
-    attributes?: Record<string, any>;
+    attributes?: Record<string, unknown>;
     styles?: Record<string, string>;
     condition?: ASTNode;
     consequent?: ASTNode[];
@@ -90,9 +90,22 @@ export class Parser {
         }
 
         const body: string[] = [];
+        let braceDepth = 0;
 
-        while(this.current().type !== TokenType.BRACE_CLOSE) {
-            if(this.current().type === TokenType.NEWLINE) {
+        while(this.current().type !== TokenType.BRACE_CLOSE || braceDepth > 0) {
+            if(this.current().type === TokenType.BRACE_OPEN) {
+                braceDepth++;
+                body.push(this.current().value);
+                this.advance();
+            } else if(this.current().type === TokenType.BRACE_CLOSE) {
+                if(braceDepth > 0) {
+                    braceDepth--;
+                    body.push(this.current().value);
+                    this.advance();
+                } else {
+                    break;
+                }
+            } else if(this.current().type === TokenType.NEWLINE) {
                 body.push(';\n');
                 this.advance();
             } else {
@@ -103,6 +116,13 @@ export class Parser {
                     body.push(this.current().value);
                 }
                 this.advance();
+                
+                // Add space after tokens for readability
+                if(this.current().type !== TokenType.BRACE_CLOSE && 
+                   this.current().type !== TokenType.NEWLINE && 
+                   this.current().type !== TokenType.BRACE_OPEN) {
+                    body.push(' ');
+                }
             }
         }
 
@@ -111,7 +131,7 @@ export class Parser {
         return {
             type: NodeType.FUNCTION,
             name: nameToken.value,
-            value: body.join(' ')
+            value: body.join('')
         };
     }
 
@@ -192,7 +212,12 @@ export class Parser {
         // Parse the expression (everything until newline)
         let expression = '';
         while(this.current().type !== TokenType.NEWLINE && this.current().type !== TokenType.EOF) {
-            expression += this.current().value + ' ';
+            // Preserve quotes for string literals
+            if(this.current().type === TokenType.STRING) {
+                expression += `"${this.current().value}" `;
+            } else {
+                expression += this.current().value + ' ';
+            }
             this.advance();
         }
 
@@ -241,7 +266,7 @@ export class Parser {
     private parseFetch(): ASTNode {
         this.expect(TokenType.KEYWORD); // 'fetch'
         
-        const attributes: Record<string, any> = {};
+        const attributes: Record<string, unknown> = {};
         
         // Parse attributes: url, into, loading, error
         while(this.current().type === TokenType.IDENTIFIER && this.peek().type === TokenType.EQUALS) {
@@ -353,12 +378,20 @@ export class Parser {
             this.advance();
         }
 
-        let value: any;
+        let value: unknown;
         if(this.current().type === TokenType.NUMBER) {
             value = parseFloat(this.current().value);
             this.advance();
         } else if(this.current().type === TokenType.STRING) {
             value = this.current().value;
+            this.advance();
+        } else if(this.current().type === TokenType.IDENTIFIER && (this.current().value === 'true' || this.current().value === 'false')) {
+            // Parse boolean
+            value = this.current().value === 'true';
+            this.advance();
+        } else if(this.current().type === TokenType.IDENTIFIER && this.current().value === 'null') {
+            // Parse null
+            value = null;
             this.advance();
         } else if(this.current().type === TokenType.BRACKET_OPEN) {
             // Parse array literal
@@ -367,7 +400,7 @@ export class Parser {
             // Parse object literal
             value = this.parseObjectLiteral();
         } else {
-            throw new Error(`Expected number, string, array, or object for state value at line ${this.current().line}. Got: ${TokenType[this.current().type]} with value: "${this.current().value}"`);
+            throw new Error(`Expected number, string, boolean, null, array, or object for state value at line ${this.current().line}. Got: ${TokenType[this.current().type]} with value: "${this.current().value}"`);
         }
 
         return {
@@ -385,7 +418,7 @@ export class Parser {
         const isComponentInstance = /^[A-Z]/.test(elementName);
         
         let value = '';
-        const attributes: Record<string, any> = {};
+        const attributes: Record<string, unknown> = {};
         let styles: Record<string, string> = {};
 
         if(this.current().type === TokenType.STRING) {
@@ -733,7 +766,7 @@ export class Parser {
         return items;
     }
     
-    private parseObjectLiteral(): Record<string, any> {
+    private parseObjectLiteral(): Record<string, unknown> {
         this.expect(TokenType.BRACE_OPEN);
 
         const obj: Record<string, unknown> = {};

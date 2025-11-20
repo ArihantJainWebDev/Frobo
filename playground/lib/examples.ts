@@ -207,8 +207,8 @@ function reset() {
   heading "Beautiful Card" style={ color: "#2563eb", fontSize: "32" }
   
   text "This card has custom styles!" style={
-    color: "#64748b"
-    fontSize: "18"
+    color: "#64748b",
+    fontSize: "18",
     padding: "10"
   }
   
@@ -269,7 +269,7 @@ component App {
   state message = ""
   
   heading "Contact Form" style={
-    fontSize: "36"
+    fontSize: "36",
     color: "#1e293b"
   }
   
@@ -332,7 +332,7 @@ function clearForm() {
   state website = "https://frobo.dev"
   
   heading "🎨 All Frobo Elements" style={
-    fontSize: "42"
+    fontSize: "42",
     color: "#1e293b"
   }
   
@@ -550,15 +550,7 @@ function birthday() {
   
   watch count {
     console.log("Count changed to:", count)
-    if count > 5 {
-      message = "Count is getting high!"
-    }
-    if count > 10 {
-      message = "Wow, that's a lot!"
-    }
-    if count == 0 {
-      message = "Back to zero!"
-    }
+    message = "Count updated!"
   }
   
   h1 "Watcher Demo" style={ fontSize: "36", color: "#1e293b" }
@@ -647,9 +639,9 @@ function reset() {
         button "Toggle Active" onClick=toggleActive bg="#3b82f6" color="white" padding="12" rounded="8"
         
         container class={ active: isActive } style={
-          padding: "20"
-          borderRadius: "8"
-          marginTop: "12"
+          padding: "20",
+          borderRadius: "8",
+          marginTop: "12",
           background: "#e2e8f0"
         } {
           text "This box has dynamic classes!" style={ fontSize: "16" }
