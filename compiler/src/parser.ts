@@ -176,6 +176,10 @@ export class Parser {
 
         if (this.current().type === TokenType.COMMA) {
           this.advance();
+          // Skip whitespace after comma
+          while (this.current().type === TokenType.NEWLINE) {
+            this.advance();
+          }
         }
       } else {
         break;
@@ -222,7 +226,9 @@ export class Parser {
         if (
           this.current().type !== TokenType.BRACE_CLOSE &&
           this.current().type !== TokenType.NEWLINE &&
-          this.current().type !== TokenType.BRACE_OPEN
+          this.current().type !== TokenType.BRACE_OPEN &&
+          this.current().type !== TokenType.PAREN_OPEN &&
+          this.current().type !== TokenType.PAREN_CLOSE
         ) {
           body.push(' ');
         }
@@ -606,8 +612,38 @@ export class Parser {
         this.advance(); // consume '='
 
         if (this.current().type === TokenType.IDENTIFIER) {
-          const attrValue = this.current().value;
+          let attrValue = this.current().value;
           this.advance();
+          
+          // Check if this is a function call with arguments
+          if (this.current().type === TokenType.PAREN_OPEN) {
+            attrValue += '(';
+            this.advance(); // consume '('
+            
+            // Parse arguments
+            while (this.current().type !== TokenType.PAREN_CLOSE) {
+              if (this.current().type === TokenType.STRING) {
+                attrValue += `"${this.current().value}"`;
+              } else if (this.current().type === TokenType.NUMBER) {
+                attrValue += this.current().value;
+              } else if (this.current().type === TokenType.IDENTIFIER) {
+                attrValue += this.current().value;
+              } else {
+                attrValue += this.current().value;
+              }
+              this.advance();
+              
+              // Handle comma between arguments
+              if (this.current().type === TokenType.COMMA) {
+                attrValue += ', ';
+                this.advance();
+              }
+            }
+            
+            attrValue += ')';
+            this.advance(); // consume ')'
+          }
+          
           attributes[attrName] = attrValue;
         } else if (this.current().type === TokenType.STRING) {
           const attrValue = this.current().value;
@@ -1076,8 +1112,20 @@ export class Parser {
       } else if (this.current().type === TokenType.NUMBER) {
         value = parseFloat(this.current().value);
         this.advance();
+      } else if (this.current().type === TokenType.BOOLEAN) {
+        value = this.current().value === 'true';
+        this.advance();
+      } else if (this.current().type === TokenType.NULL) {
+        value = null;
+        this.advance();
+      } else if (this.current().type === TokenType.BRACE_OPEN) {
+        // Nested object
+        value = this.parseObjectLiteral();
+      } else if (this.current().type === TokenType.BRACKET_OPEN) {
+        // Array value
+        value = this.parseArrayLiteral();
       } else {
-        throw new Error(`Expected string or number in object at line ${this.current().line}`);
+        throw new Error(`Expected string, number, boolean, null, object, or array in object at line ${this.current().line}`);
       }
 
       obj[key] = value;

@@ -1,4 +1,4 @@
-import { ASTNode, NodeType } from "./parser.js";
+import { ASTNode, NodeType } from './parser.js';
 
 export interface CompiledOutput {
   html: string;
@@ -43,22 +43,22 @@ export class CodeGenerator {
         return this.generateForLoop(node);
 
       default:
-        return "";
+        return '';
     }
   }
 
   private generateProgram(node: ASTNode): string {
-    if (!node.children) return "";
+    if (!node.children) return '';
 
-    return node.children.map((child) => this.generateHTML(child)).join("\n");
+    return node.children.map((child) => this.generateHTML(child)).join('\n');
   }
 
   private generateComponent(node: ASTNode): string {
-    const name = node.name || "component";
-    
+    const name = node.name || 'component';
+
     // Check if component has props
-    const propsNode = node.children?.find(child => child.type === NodeType.PROPS_DECLARATION);
-    
+    const propsNode = node.children?.find((child) => child.type === NodeType.PROPS_DECLARATION);
+
     // If component has props, don't render it directly - it will be instantiated
     if (propsNode) {
       return `<!-- Component ${name} defined with props: ${(propsNode.value as string[]).join(', ')} -->`;
@@ -66,12 +66,12 @@ export class CodeGenerator {
 
     this.indentLevel++;
 
-    let childrenHTML = "";
+    let childrenHTML = '';
     if (node.children) {
       childrenHTML = node.children
-        .filter(child => child.type !== NodeType.PROPS_DECLARATION)
+        .filter((child) => child.type !== NodeType.PROPS_DECLARATION)
         .map((child) => this.indent() + this.generateHTML(child))
-        .join("\n");
+        .join('\n');
     }
 
     this.indentLevel--;
@@ -80,13 +80,13 @@ export class CodeGenerator {
   }
 
   private generateElement(node: ASTNode): string {
-    const name = node.name || "div";
-    const value = node.value || "";
+    const name = node.name || 'div';
+    const value = node.value || '';
     const onClick = node.attributes?.onClick;
-    const styleAttr = node.styles ? ` style="${this.generateInlineStyles(node.styles)}"` : "";
-    
+    const styleAttr = node.styles ? ` style="${this.generateInlineStyles(node.styles)}"` : '';
+
     // Handle class attribute
-    let classAttr = "";
+    let classAttr = '';
     const classValue = node.attributes?.class;
     if (classValue) {
       if (typeof classValue === 'string') {
@@ -97,25 +97,27 @@ export class CodeGenerator {
         classAttr = ` id="${elementId}" data-dynamic-class='${JSON.stringify(classValue)}'`;
       }
     }
-    
+
     // Handle nested children
-    let childrenHTML = "";
+    let childrenHTML = '';
     if (node.children && node.children.length > 0) {
       this.indentLevel++;
-      childrenHTML = "\n" + node.children
-        .map((child) => this.indent() + this.generateHTML(child))
-        .join("\n") + "\n" + this.indent().slice(2);
+      childrenHTML =
+        '\n' +
+        node.children.map((child) => this.indent() + this.generateHTML(child)).join('\n') +
+        '\n' +
+        this.indent().slice(2);
       this.indentLevel--;
     }
 
     switch (name) {
-      case "text":
-        if (typeof value === 'string' && value.includes("{") && value.includes("}")) {
-          // Extract all variable names from the template
-          const matches = value.match(/\{(\w+)\}/g);
+      case 'text':
+        if (typeof value === 'string' && value.includes('{') && value.includes('}')) {
+          // Extract all variable names from the template (including nested properties)
+          const matches = value.match(/\{([\w.]+)\}/g);
           if (matches) {
             const varNames = matches.map((m: string) => m.slice(1, -1)); // Remove { }
-            const uniqueId = `text-${varNames.join('-')}`;
+            const uniqueId = `text-${varNames.join('-').replace(/\./g, '-')}`;
             // Keep the template as-is for initial display (will be updated by JS)
             return `<p id="${uniqueId}" data-template="${this.escapeHTML(
               value
@@ -124,192 +126,239 @@ export class CodeGenerator {
         }
         return `<p${classAttr}${styleAttr}>${this.escapeHTML(String(value))}${childrenHTML}</p>`;
 
-      case "heading":
-        const level = node.attributes?.level || "1";
+      case 'heading': {
+        const level = node.attributes?.level || '1';
         return `<h${level}${classAttr}${styleAttr}>${this.escapeHTML(String(value))}${childrenHTML}</h${level}>`;
-      
-      case "h1":
-      case "h2":
-      case "h3":
-      case "h4":
-      case "h5":
-      case "h6":
+      }
+
+      case 'h1':
+      case 'h2':
+      case 'h3':
+      case 'h4':
+      case 'h5':
+      case 'h6':
         return `<${name}${classAttr}${styleAttr}>${this.escapeHTML(String(value))}${childrenHTML}</${name}>`;
 
-      case "button":
-        const onclickAttr = onClick ? ` onclick="${String(onClick)}()"` : "";
+      case 'button': {
+        let onclickAttr = '';
+        if (onClick) {
+          const onClickStr = String(onClick);
+          // Check if onClick already includes parentheses (function call with args)
+          if (onClickStr.includes('(')) {
+            onclickAttr = ` onclick="${onClickStr}"`;
+          } else {
+            // No parentheses, add empty ones for no-arg function call
+            onclickAttr = ` onclick="${onClickStr}()"`;
+          }
+        }
         return `<button${onclickAttr}${classAttr}${styleAttr}>${this.escapeHTML(String(value))}${childrenHTML}</button>`;
+      }
 
-      case "input":
+      case 'input': {
         const inputValue = node.attributes?.value;
         const onChange = node.attributes?.onChange;
-        const inputId = inputValue ? `input-${String(inputValue)}` : `input-${Math.random().toString(36).substr(2, 9)}`;
-        
+        const inputId = inputValue
+          ? `input-${String(inputValue)}`
+          : `input-${Math.random().toString(36).substr(2, 9)}`;
+
         let inputAttrs = `type="text" id="${inputId}" placeholder="${this.escapeHTML(String(value))}"${styleAttr}`;
-        
+
         if (inputValue) {
           inputAttrs += ` data-bind="${String(inputValue)}"`;
         }
         if (onChange) {
           inputAttrs += ` data-onchange="${String(onChange)}"`;
         }
-        
-        return `<input ${inputAttrs} />`;
 
-      case "textarea":
+        return `<input ${inputAttrs} />`;
+      }
+
+      case 'textarea': {
         const textareaValue = node.attributes?.value;
-        const textareaId = textareaValue ? `textarea-${String(textareaValue)}` : `textarea-${Math.random().toString(36).substr(2, 9)}`;
-        
+        const textareaId = textareaValue
+          ? `textarea-${String(textareaValue)}`
+          : `textarea-${Math.random().toString(36).substr(2, 9)}`;
+
         let textareaAttrs = `id="${textareaId}" placeholder="${this.escapeHTML(String(value))}"${styleAttr}`;
-        
+
         if (textareaValue) {
           textareaAttrs += ` data-bind="${String(textareaValue)}"`;
         }
-        
+
         return `<textarea ${textareaAttrs}></textarea>`;
+      }
 
-      case "image":
+      case 'image': {
         const src = node.attributes?.src || value;
-        const alt = node.attributes?.alt || "Image";
+        const alt = node.attributes?.alt || 'Image';
         return `<img src="${this.escapeHTML(String(src))}" alt="${this.escapeHTML(String(alt))}"${styleAttr} />`;
+      }
 
-      case "link":
-        const href = node.attributes?.href || "#";
+      case 'link': {
+        const href = node.attributes?.href || '#';
         const target = node.attributes?.target;
-        const targetAttr = target ? ` target="${String(target)}"` : "";
+        const targetAttr = target ? ` target="${String(target)}"` : '';
         return `<a href="${this.escapeHTML(String(href))}"${targetAttr}${styleAttr}>${this.escapeHTML(String(value))}${childrenHTML}</a>`;
+      }
 
-      case "row":
-        const rowStyle = styleAttr ? styleAttr.slice(0, -1) + '; display: flex; flex-direction: row; gap: 16px;"' : ' style="display: flex; flex-direction: row; gap: 16px;"';
+      case 'row': {
+        const rowStyle = styleAttr
+          ? styleAttr.slice(0, -1) + '; display: flex; flex-direction: row; gap: 16px;"'
+          : ' style="display: flex; flex-direction: row; gap: 16px;"';
         return `<div${rowStyle}>${this.escapeHTML(String(value))}${childrenHTML}</div>`;
-      
-      case "column":
-        const colStyle = styleAttr ? styleAttr.slice(0, -1) + '; display: flex; flex-direction: column; gap: 16px;"' : ' style="display: flex; flex-direction: column; gap: 16px;"';
-        return `<div${colStyle}>${this.escapeHTML(String(value))}${childrenHTML}</div>`;
-      
-      case "grid":
-        const cols = node.attributes?.cols || "3";
-        const gridStyle = styleAttr ? styleAttr.slice(0, -1) + `; display: grid; grid-template-columns: repeat(${String(cols)}, 1fr); gap: 16px;"` : ` style="display: grid; grid-template-columns: repeat(${String(cols)}, 1fr); gap: 16px;"`;
-        return `<div${gridStyle}>${this.escapeHTML(String(value))}${childrenHTML}</div>`;
-      
-      case "center":
-        const centerStyle = styleAttr ? styleAttr.slice(0, -1) + '; display: flex; justify-content: center; align-items: center;"' : ' style="display: flex; justify-content: center; align-items: center;"';
-        return `<div${centerStyle}>${this.escapeHTML(String(value))}${childrenHTML}</div>`;
+      }
 
-      case "container":
+      case 'column': {
+        const colStyle = styleAttr
+          ? styleAttr.slice(0, -1) + '; display: flex; flex-direction: column; gap: 16px;"'
+          : ' style="display: flex; flex-direction: column; gap: 16px;"';
+        return `<div${colStyle}>${this.escapeHTML(String(value))}${childrenHTML}</div>`;
+      }
+
+      case 'grid': {
+        const cols = node.attributes?.cols || '3';
+        const gridStyle = styleAttr
+          ? styleAttr.slice(0, -1) +
+            `; display: grid; grid-template-columns: repeat(${String(cols)}, 1fr); gap: 16px;"`
+          : ` style="display: grid; grid-template-columns: repeat(${String(cols)}, 1fr); gap: 16px;"`;
+        return `<div${gridStyle}>${this.escapeHTML(String(value))}${childrenHTML}</div>`;
+      }
+
+      case 'center': {
+        const centerStyle = styleAttr
+          ? styleAttr.slice(0, -1) +
+            '; display: flex; justify-content: center; align-items: center;"'
+          : ' style="display: flex; justify-content: center; align-items: center;"';
+        return `<div${centerStyle}>${this.escapeHTML(String(value))}${childrenHTML}</div>`;
+      }
+
+      case 'container':
         return `<div${styleAttr}>${this.escapeHTML(String(value))}${childrenHTML}</div>`;
 
       default:
         return `<div${styleAttr}>${this.escapeHTML(String(value))}${childrenHTML}</div>`;
     }
   }
-  
+
   private generateComponentInstance(node: ASTNode): string {
-    const componentName = node.name || "Component";
+    const componentName = node.name || 'Component';
     const props = node.attributes || {};
-    
+
     // Find the component definition
     const componentDef = this.ast.children?.find(
-      child => child.type === NodeType.COMPONENT && child.name === componentName
+      (child) => child.type === NodeType.COMPONENT && child.name === componentName
     );
-    
+
     if (!componentDef) {
       return `<!-- Error: Component ${componentName} not found -->`;
     }
-    
+
     // Component has props, we'll substitute them during rendering
-    
+
     // Render component with props substituted
     this.indentLevel++;
-    
-    let childrenHTML = "";
+
+    let childrenHTML = '';
     if (componentDef.children) {
       childrenHTML = componentDef.children
-        .filter(child => child.type !== NodeType.PROPS_DECLARATION)
+        .filter((child) => child.type !== NodeType.PROPS_DECLARATION)
         .map((child) => {
           // Substitute prop values in the child nodes
           const substitutedChild = this.substitutePropValues(child, props);
           return this.indent() + this.generateHTML(substitutedChild);
         })
-        .join("\n");
+        .join('\n');
     }
-    
+
     this.indentLevel--;
-    
+
     const instanceId = `${componentName}-${Math.random().toString(36).substr(2, 9)}`;
     return `<div id="${instanceId}" class="frobo-component-instance">\n${childrenHTML}\n</div>`;
   }
-  
+
   private substitutePropValues(node: ASTNode, props: Record<string, unknown>): ASTNode {
     // Clone the node
     const newNode = { ...node };
-    
+
     // Substitute props in value
     if (newNode.value && typeof newNode.value === 'string') {
       Object.entries(props).forEach(([propName, propValue]) => {
         if (typeof newNode.value === 'string') {
-          newNode.value = newNode.value.replace(new RegExp(`\\{${propName}\\}`, 'g'), String(propValue));
+          newNode.value = newNode.value.replace(
+            new RegExp(`\\{${propName}\\}`, 'g'),
+            String(propValue)
+          );
         }
       });
     }
-    
+
     // Recursively substitute in children
     if (newNode.children) {
-      newNode.children = newNode.children.map(child => this.substitutePropValues(child, props));
+      newNode.children = newNode.children.map((child) => this.substitutePropValues(child, props));
     }
-    
+
     return newNode;
   }
-  
+
   private generateInlineStyles(styles: Record<string, string>): string {
     return Object.entries(styles)
       .map(([prop, value]) => {
         // Convert camelCase to kebab-case
         const cssProp = this.camelToKebab(prop);
-        
+
         // Add 'px' unit if value is a number without units
         const cssValue = this.addUnitIfNeeded(cssProp, value);
-        
+
         return `${cssProp}: ${cssValue}`;
       })
       .join('; ');
   }
-  
+
   private camelToKebab(str: string): string {
     return str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
   }
-  
+
   private addUnitIfNeeded(property: string, value: string): string {
     // Properties that need units
     const needsUnit = [
-      'width', 'height', 'margin', 'padding', 'top', 'right', 'bottom', 'left',
-      'font-size', 'border-width', 'border-radius', 'gap'
+      'width',
+      'height',
+      'margin',
+      'padding',
+      'top',
+      'right',
+      'bottom',
+      'left',
+      'font-size',
+      'border-width',
+      'border-radius',
+      'gap',
     ];
-    
+
     // Check if value is a pure number (no units)
     if (/^\d+$/.test(value) && needsUnit.includes(property)) {
       return value + 'px';
     }
-    
+
     return value;
   }
 
   private generateIfStatement(node: ASTNode): string {
-    if (!node.condition || !node.consequent) return "";
+    if (!node.condition || !node.consequent) return '';
 
     // Generate unique ID for this conditional block
     const conditionId = `cond-${Math.random().toString(36).substr(2, 9)}`;
 
     // Generate HTML for consequent (if body)
     let html = `<div id="${conditionId}-if" data-condition="${this.generateConditionString(node.condition)}" style="display: none;">`;
-    html += node.consequent.map(child => this.generateHTML(child)).join('\n');
+    html += node.consequent.map((child) => this.generateHTML(child)).join('\n');
     html += '</div>';
 
     // Generate HTML for else-if branches
     if (node.elseIfBranches && node.elseIfBranches.length > 0) {
       node.elseIfBranches.forEach((branch, index) => {
         html += `<div id="${conditionId}-elseif-${index}" data-condition="${this.generateConditionString(branch.condition)}" style="display: none;">`;
-        html += branch.consequent.map(child => this.generateHTML(child)).join('\n');
+        html += branch.consequent.map((child) => this.generateHTML(child)).join('\n');
         html += '</div>';
       });
     }
@@ -317,7 +366,7 @@ export class CodeGenerator {
     // Generate HTML for alternate (else body) if it exists
     if (node.alternate && node.alternate.length > 0) {
       html += `<div id="${conditionId}-else" style="display: none;">`;
-      html += node.alternate.map(child => this.generateHTML(child)).join('\n');
+      html += node.alternate.map((child) => this.generateHTML(child)).join('\n');
       html += '</div>';
     }
 
@@ -325,7 +374,7 @@ export class CodeGenerator {
   }
 
   private generateForLoop(node: ASTNode): string {
-    if (!node.itemName || !node.arrayName || !node.body) return "";
+    if (!node.itemName || !node.arrayName || !node.body) return '';
 
     // Generate unique ID for this loop
     const loopId = `loop-${Math.random().toString(36).substr(2, 9)}`;
@@ -337,7 +386,7 @@ export class CodeGenerator {
 
     // Store the template for this loop
     html += `<template id="${loopId}-template">`;
-    html += node.body.map(child => this.generateLoopItemHTML(child, node.itemName!)).join('\n');
+    html += node.body.map((child) => this.generateLoopItemHTML(child, node.itemName!)).join('\n');
     html += '</template>';
 
     return html;
@@ -345,60 +394,60 @@ export class CodeGenerator {
 
   private generateLoopItemHTML(node: ASTNode, itemName: string): string {
     if (node.type === NodeType.ELEMENT) {
-      const name = node.name || "div";
-      let value = String(node.value || "");
-      
+      const name = node.name || 'div';
+      let value = String(node.value || '');
+
       // Replace {item} with placeholder for loop item
       value = value.replace(new RegExp(`\\{${itemName}\\}`, 'g'), `{{LOOP_ITEM}}`);
 
       const onClick = node.attributes?.onClick;
 
       switch (name) {
-        case "text":
+        case 'text':
           return `<p class="loop-item">${this.escapeHTML(value)}</p>`;
-        case "heading":
+        case 'heading':
           return `<h1 class="loop-item">${this.escapeHTML(value)}</h1>`;
-        case "button":
-          const onclickAttr = onClick ? ` onclick="${String(onClick)}()"` : "";
+        case 'button':
+          const onclickAttr = onClick ? ` onclick="${String(onClick)}()"` : '';
           return `<button class="loop-item"${onclickAttr}>${this.escapeHTML(value)}</button>`;
-        case "input":
+        case 'input':
           return `<input class="loop-item" type="text" placeholder="${this.escapeHTML(value)}" />`;
-        case "container":
+        case 'container':
           return `<div class="loop-item">${this.escapeHTML(value)}</div>`;
         default:
           return `<div class="loop-item">${this.escapeHTML(value)}</div>`;
       }
     }
-    return "";
+    return '';
   }
 
   private generateConditionString(condition: ASTNode): string {
     // Handle logical expressions (&&, ||, !)
     if (condition.type === NodeType.LOGICAL_EXPRESSION) {
       const operator = condition.operator;
-      
+
       // Handle NOT operator (unary)
       if (operator === '!') {
         const argument = condition.argument;
-        if (!argument) return "";
+        if (!argument) return '';
         const argStr = this.generateConditionString(argument);
         return `!(${argStr})`;
       }
-      
+
       // Handle AND and OR operators (binary)
       const left = condition.left;
       const right = condition.right;
-      if (!left || !right) return "";
-      
+      if (!left || !right) return '';
+
       const leftStr = this.generateConditionString(left);
       const rightStr = this.generateConditionString(right);
-      
+
       return `(${leftStr} ${operator} ${rightStr})`;
     }
-    
+
     // Handle comparison conditions
     if (condition.type === NodeType.CONDITION) {
-      if (!condition.children || condition.children.length !== 2) return "";
+      if (!condition.children || condition.children.length !== 2) return '';
 
       const left = condition.children[0];
       const right = condition.children[1];
@@ -409,32 +458,32 @@ export class CodeGenerator {
 
       return `${leftValue}${operator}${rightValue}`;
     }
-    
+
     // Handle simple expressions (identifiers, literals, etc.)
     return this.generateExpressionString(condition);
   }
-  
+
   private generateExpressionString(node: ASTNode): string {
     switch (node.type) {
       case NodeType.IDENTIFIER:
         return `state.${node.value}`;
-      
+
       case NodeType.NUMBER_LITERAL:
         return String(node.value);
-      
+
       case NodeType.STRING_LITERAL:
         return `"${node.value}"`;
-      
+
       case NodeType.BOOLEAN_LITERAL:
         return String(node.value);
-      
+
       case NodeType.NULL_LITERAL:
         return 'null';
-      
+
       case NodeType.MEMBER_EXPRESSION:
         const object = this.generateExpressionString(node.object!);
         return `${object}?.${node.property}`;
-      
+
       default:
         return String(node.value || '');
     }
@@ -487,14 +536,10 @@ export class CodeGenerator {
   private generateJS(): string {
     if (!this.ast.children) return 'console.log("Frobo app loaded!")';
 
-    const components = this.ast.children.filter(
-      (child) => child.type === NodeType.COMPONENT
-    );
-    const functions = this.ast.children.filter(
-      (child) => child.type === NodeType.FUNCTION
-    );
+    const components = this.ast.children.filter((child) => child.type === NodeType.COMPONENT);
+    const functions = this.ast.children.filter((child) => child.type === NodeType.FUNCTION);
 
-    let js = "";
+    let js = '';
 
     // Inline Frobo runtime with enhanced features
     js += `const Frobo = {
@@ -569,8 +614,19 @@ export class CodeGenerator {
           const vars = element.getAttribute('data-vars');
           if (vars) {
             vars.split(',').forEach(varName => {
-              const regex = new RegExp('\\{' + varName + '\\}', 'g');
-              result = result.replace(regex, String(self.state[varName]));
+              const regex = new RegExp('\\{' + varName.replace(/\./g, '\\.') + '\\}', 'g');
+              // Handle nested property access
+              let value;
+              if (varName.includes('.')) {
+                const parts = varName.split('.');
+                value = self.state[parts[0]];
+                for (let i = 1; i < parts.length && value !== undefined && value !== null; i++) {
+                  value = value[parts[i]];
+                }
+              } else {
+                value = self.state[varName];
+              }
+              result = result.replace(regex, String(value !== undefined && value !== null ? value : ''));
             });
           } else {
             // Fallback for single variable (old format)
@@ -659,18 +715,18 @@ export class CodeGenerator {
       const stateObj = allStates
         .map((state) => {
           let initialValue;
-          if (typeof state.value === "string") {
+          if (typeof state.value === 'string') {
             initialValue = `"${state.value}"`;
           } else if (Array.isArray(state.value)) {
             initialValue = JSON.stringify(state.value);
-          } else if (typeof state.value === "object" && state.value !== null) {
+          } else if (typeof state.value === 'object' && state.value !== null) {
             initialValue = JSON.stringify(state.value);
           } else {
             initialValue = state.value;
           }
           return `${state.name}: ${initialValue}`;
         })
-        .join(", ");
+        .join(', ');
 
       js += `const state = Frobo.createState({ ${stateObj} });\n`;
 
@@ -682,32 +738,36 @@ export class CodeGenerator {
 
     // Add computed properties in global scope
     if (allComputed.length > 0) {
-      js += "// Computed properties\n";
+      js += '// Computed properties\n';
       allComputed.forEach((comp) => {
         // Replace state variable references in computed expressions
         // But preserve string literals and other computed properties
         let computedValue = String(comp.value || '');
-        
+
         // First, replace state variables (but not computed properties)
         allStates.forEach((state) => {
           if (typeof state.name === 'string') {
             computedValue = computedValue.replace(
-              new RegExp(`\\b${state.name}\\b`, "g"),
+              new RegExp(`\\b${state.name}\\b`, 'g'),
               `state.${state.name}`
             );
           }
         });
-        
+
         // Then, replace references to other computed properties with state.computedName
         allComputed.forEach((otherComp) => {
-          if (typeof otherComp.name === 'string' && typeof comp.name === 'string' && otherComp.name !== comp.name) {
+          if (
+            typeof otherComp.name === 'string' &&
+            typeof comp.name === 'string' &&
+            otherComp.name !== comp.name
+          ) {
             computedValue = computedValue.replace(
-              new RegExp(`\\b${otherComp.name}\\b`, "g"),
+              new RegExp(`\\b${otherComp.name}\\b`, 'g'),
               `state.${otherComp.name}`
             );
           }
         });
-        
+
         js += `Object.defineProperty(state, '${comp.name}', {\n`;
         js += `  get() { return ${computedValue}; },\n`;
         js += `  enumerable: true\n`;
@@ -723,14 +783,13 @@ export class CodeGenerator {
         );
 
         if (states.length > 0) {
-          
           // Add fetch declarations
           const fetches = component.children.filter(
             (child) => child.type === NodeType.FETCH_DECLARATION
           );
-          
+
           if (fetches.length > 0) {
-            js += "\n// Fetch helper function\n";
+            js += '\n// Fetch helper function\n';
             js += `async function froboFetch(url, intoVar, loadingVar, errorVar) {\n`;
             js += `  if (loadingVar) state[loadingVar] = true;\n`;
             js += `  if (errorVar) state[errorVar] = null;\n`;
@@ -747,16 +806,16 @@ export class CodeGenerator {
             js += `  }\n`;
             js += `}\n`;
           }
-          
+
           // Add lifecycle hooks
           const hooks = component.children.filter(
             (child) => child.type === NodeType.LIFECYCLE_HOOK
           );
-          
-          js += "\n";
+
+          js += '\n';
           js += `// Register reactive elements\n`;
           js += `window.addEventListener('DOMContentLoaded', () => {\n`;
-          
+
           // Setup dynamic classes
           js += `  // Setup dynamic classes\n`;
           js += `  document.querySelectorAll('[data-dynamic-class]').forEach(el => {\n`;
@@ -777,25 +836,23 @@ export class CodeGenerator {
           js += `    });\n`;
           js += `  });\n`;
           js += `  \n`;
-          
+
           // Add watchers
-          const watchers = component.children.filter(
-            (child) => child.type === NodeType.WATCHER
-          );
-          
+          const watchers = component.children.filter((child) => child.type === NodeType.WATCHER);
+
           if (watchers.length > 0) {
             js += `  // Setup watchers\n`;
-            watchers.forEach(watcher => {
+            watchers.forEach((watcher) => {
               let watcherBody = String(watcher.value || '');
               // Replace state references using allStates
               allStates.forEach((state) => {
                 if (typeof state.name === 'string') {
                   watcherBody = watcherBody.replace(
-                    new RegExp(`\\b${state.name}\\s*=`, "g"),
+                    new RegExp(`\\b${state.name}\\s*=`, 'g'),
                     `state.${state.name} =`
                   );
                   watcherBody = watcherBody.replace(
-                    new RegExp(`\\b${state.name}\\b(?!\\s*=)`, "g"),
+                    new RegExp(`\\b${state.name}\\b(?!\\s*=)`, 'g'),
                     `state.${state.name}`
                   );
                 }
@@ -805,11 +862,11 @@ export class CodeGenerator {
               js += `  });\n`;
             });
           }
-          
+
           // Add fetch calls
           if (fetches.length > 0) {
             js += `  // Fetch data\n`;
-            fetches.forEach(fetchNode => {
+            fetches.forEach((fetchNode) => {
               const url = fetchNode.attributes?.url || '';
               const into = fetchNode.attributes?.into || null;
               const loading = fetchNode.attributes?.loading || null;
@@ -817,22 +874,22 @@ export class CodeGenerator {
               js += `  froboFetch("${url}", "${into}", "${loading}", "${error}");\n`;
             });
           }
-          
+
           // Add onMount hooks
-          const onMountHooks = hooks.filter(h => h.name === 'onMount');
+          const onMountHooks = hooks.filter((h) => h.name === 'onMount');
           if (onMountHooks.length > 0) {
             js += `  // onMount lifecycle\n`;
-            onMountHooks.forEach(hook => {
+            onMountHooks.forEach((hook) => {
               let hookBody = String(hook.value || '');
               // Replace state references using allStates
               allStates.forEach((state) => {
                 if (typeof state.name === 'string') {
                   hookBody = hookBody.replace(
-                    new RegExp(`\\b${state.name}\\s*=`, "g"),
+                    new RegExp(`\\b${state.name}\\s*=`, 'g'),
                     `state.${state.name} =`
                   );
                   hookBody = hookBody.replace(
-                    new RegExp(`\\b${state.name}\\b(?!\\s*=)`, "g"),
+                    new RegExp(`\\b${state.name}\\b(?!\\s*=)`, 'g'),
                     `state.${state.name}`
                   );
                 }
@@ -845,12 +902,14 @@ export class CodeGenerator {
           js += `  document.querySelectorAll('[data-vars]').forEach(el => {\n`;
           js += `    const vars = el.getAttribute('data-vars').split(',');\n`;
           js += `    vars.forEach(varName => {\n`;
-          js += `      Frobo.watch(varName, el);\n`;
+          js += `      // For nested properties, watch the root property\n`;
+          js += `      const rootProp = varName.includes('.') ? varName.split('.')[0] : varName;\n`;
+          js += `      Frobo.watch(rootProp, el);\n`;
           js += `    });\n`;
           js += `    // Initial update\n`;
           js += `    if (vars.length > 0) Frobo.updateDOM(vars[0]);\n`;
           js += `  });\n`;
-          
+
           // Add conditional rendering setup
           js += `\n  // Setup conditional rendering\n`;
           js += `  Frobo.setupConditionals = function() {\n`;
@@ -939,7 +998,7 @@ export class CodeGenerator {
           js += `  \n`;
           js += `  Frobo.setupConditionals();\n`;
           js += `  \n`;
-          
+
           // Add input binding setup
           js += `  // Setup input and textarea binding\n`;
           js += `  document.querySelectorAll('input[data-bind], textarea[data-bind]').forEach(input => {\n`;
@@ -969,7 +1028,7 @@ export class CodeGenerator {
           js += `    };\n`;
           js += `  });\n`;
           js += `  \n`;
-          
+
           // Add loop rendering setup
           js += `  // Setup loop rendering\n`;
           js += `  Frobo.renderLoops = function() {\n`;
@@ -998,17 +1057,21 @@ export class CodeGenerator {
           js += `  };\n`;
           js += `  \n`;
           js += `  Frobo.renderLoops();\n`;
-          
+
           js += `});\n\n`;
         }
       }
     });
 
     functions.forEach((func) => {
-      js += `function ${func.name}() {\n`;
+      // Generate function signature with parameters
+      const params = func.parameters || [];
+      const paramNames = params.map((p) => p.name).join(', ');
+      js += `function ${func.name}(${paramNames}) {\n`;
 
       let body = String(func.value || '');
 
+      // Replace state variable references with state.varName
       components.forEach((component) => {
         if (component.children) {
           const states = component.children.filter(
@@ -1016,14 +1079,18 @@ export class CodeGenerator {
           );
           states.forEach((state) => {
             if (typeof state.name === 'string') {
-              body = body.replace(
-                new RegExp(`\\b${state.name}\\s*=`, "g"),
-                `state.${state.name} =`
-              );
-              body = body.replace(
-                new RegExp(`\\b${state.name}\\b(?!\\s*=)`, "g"),
-                `state.${state.name}`
-              );
+              // Don't replace parameter names with state references
+              const isParameter = params.some((p) => p.name === state.name);
+              if (!isParameter) {
+                body = body.replace(
+                  new RegExp(`\\b${state.name}\\s*=`, 'g'),
+                  `state.${state.name} =`
+                );
+                body = body.replace(
+                  new RegExp(`\\b${state.name}\\b(?!\\s*=)`, 'g'),
+                  `state.${state.name}`
+                );
+              }
             }
           });
         }
@@ -1039,16 +1106,16 @@ export class CodeGenerator {
   }
 
   private indent(): string {
-    return "  ".repeat(this.indentLevel);
+    return '  '.repeat(this.indentLevel);
   }
 
   private escapeHTML(text: string): string {
     const map: Record<string, string> = {
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#039;",
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;',
     };
     return text.replace(/[&<>"']/g, (char) => map[char]);
   }

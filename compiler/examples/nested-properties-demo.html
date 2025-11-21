@@ -1,0 +1,409 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Nested Properties Demo</title>
+  <style>
+    .frobo-component {
+  padding: 20px;
+  margin: 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+.frobo-component p {
+  margin: 10px 0;
+  font-size: 16px;
+}
+
+.frobo-component h1 {
+  margin: 10px 0;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.frobo-component button {
+  padding: 10px 20px;
+  margin: 5px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.frobo-component button:hover {
+  background-color: #0056b3;
+}
+
+.frobo-component input {
+  padding: 8px 12px;
+  margin: 5px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+}
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div id="NestedPropertiesDemo" class="frobo-component">
+  
+  
+  <p>User Profile</p>
+  <p id="text-user-profile-firstName-user-profile-lastName" data-template="Name: {user.profile.firstName} {user.profile.lastName}" data-vars="user.profile.firstName,user.profile.lastName">Name: {user.profile.firstName} {user.profile.lastName}</p>
+  <p id="text-fullName" data-template="Full Name (computed): {fullName}" data-vars="fullName">Full Name (computed): {fullName}</p>
+  <p id="text-user-profile-contact-email" data-template="Email: {user.profile.contact.email}" data-vars="user.profile.contact.email">Email: {user.profile.contact.email}</p>
+  <p id="text-user-profile-contact-phone" data-template="Phone: {user.profile.contact.phone}" data-vars="user.profile.contact.phone">Phone: {user.profile.contact.phone}</p>
+  <p id="text-user-age" data-template="Age: {user.age}" data-vars="user.age">Age: {user.age}</p>
+  <div id="cond-s4os9vtt1-if" data-condition="state.user?.age>18" style="display: none;"><p>Status: Adult</p></div>
+  <div id="cond-7yous5wzr-if" data-condition="state.user?.isActive" style="display: none;"><p>Account is active</p></div>
+</div>
+  <script>
+    const Frobo = {
+  state: {},
+  dependencies: {},
+  domBindings: [],
+  updateQueue: new Set(),
+  updateScheduled: false,
+  
+  watchers: {},
+  
+  createState(initialState) {
+    const self = this;
+    this.state = new Proxy(initialState, {
+      set: (target, property, value) => {
+        const oldValue = target[property];
+        target[property] = value;
+        self.scheduleUpdate(property);
+        // Trigger watchers
+        if (self.watchers[property]) {
+          self.watchers[property].forEach(callback => callback(value, oldValue));
+        }
+        return true;
+      }
+    });
+    return this.state;
+  },
+  
+  addWatcher(stateKey, callback) {
+    if (!this.watchers[stateKey]) {
+      this.watchers[stateKey] = [];
+    }
+    this.watchers[stateKey].push(callback);
+  },
+  
+  watch(stateKey, element) {
+    if (!this.dependencies[stateKey]) {
+      this.dependencies[stateKey] = [];
+    }
+    this.dependencies[stateKey].push(element);
+  },
+  
+  scheduleUpdate(stateKey) {
+    const self = this;
+    this.updateQueue.add(stateKey);
+    if (!this.updateScheduled) {
+      this.updateScheduled = true;
+      requestAnimationFrame(() => {
+        self.flushUpdates();
+      });
+    }
+  },
+  
+  flushUpdates() {
+    const self = this;
+    this.updateQueue.forEach(key => {
+      self.updateDOM(key);
+    });
+    this.updateQueue.clear();
+    this.updateScheduled = false;
+  },
+  
+  updateDOM(stateKey) {
+    const self = this;
+    const elements = this.dependencies[stateKey];
+    if (elements) {
+      elements.forEach(element => {
+        const template = element.getAttribute('data-template');
+        if (template) {
+          // Replace all variables in the template with their current state values
+          let result = template;
+          const vars = element.getAttribute('data-vars');
+          if (vars) {
+            vars.split(',').forEach(varName => {
+              const regex = new RegExp('\{' + varName.replace(/./g, '\.') + '\}', 'g');
+              // Handle nested property access
+              let value;
+              if (varName.includes('.')) {
+                const parts = varName.split('.');
+                value = self.state[parts[0]];
+                for (let i = 1; i < parts.length && value !== undefined && value !== null; i++) {
+                  value = value[parts[i]];
+                }
+              } else {
+                value = self.state[varName];
+              }
+              result = result.replace(regex, String(value !== undefined && value !== null ? value : ''));
+            });
+          } else {
+            // Fallback for single variable (old format)
+            result = result.replace(new RegExp('\{' + stateKey + '\}', 'g'), String(self.state[stateKey]));
+          }
+          element.textContent = result;
+        }
+      });
+    }
+    this.domBindings
+      .filter(binding => binding.stateKey === stateKey)
+      .forEach(binding => {
+        if (self.state[stateKey] !== undefined) {
+          if (binding.property === 'textContent') {
+            binding.element.textContent = String(self.state[stateKey]);
+          } else if (binding.property === 'value') {
+            binding.element.value = String(self.state[stateKey]);
+          } else {
+            binding.element.setAttribute(binding.property, String(self.state[stateKey]));
+          }
+        }
+      });
+    
+    // Re-evaluate conditionals
+    if (this.conditionals) {
+      this.conditionals.forEach(evaluate => evaluate());
+    }
+    
+    // Re-render loops
+    if (this.renderLoops) {
+      this.renderLoops();
+    }
+  },
+  
+  bind(elementId, stateKey, property = 'textContent') {
+    const element = document.getElementById(elementId);
+    if (element) {
+      this.domBindings.push({ element, property, stateKey });
+      this.updateDOM(stateKey);
+    }
+  },
+  
+  on(elementId, eventType, handler) {
+    const element = document.getElementById(elementId);
+    if (element) {
+      element.addEventListener(eventType, handler);
+    }
+  },
+  
+  onClick(elementId, handler) {
+    this.on(elementId, 'click', handler);
+  },
+  
+  onChange(elementId, handler) {
+    const element = document.getElementById(elementId);
+    if (element && (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement)) {
+      const updateHandler = (event) => {
+        handler(event.target.value);
+      };
+      element.addEventListener('change', updateHandler);
+      element.addEventListener('input', updateHandler);
+    }
+  }
+};
+
+// Initialize state
+const state = Frobo.createState({ user: {"profile":{"firstName":"John","lastName":"Doe","contact":{"email":"john.doe@example.com","phone":"555-1234"}},"age":30,"isActive":true} });
+let user = state.user;
+
+// Computed properties
+Object.defineProperty(state, 'fullName', {
+  get() { return state.user . profile . firstName + " " + state.user . profile . lastName; },
+  enumerable: true
+});
+
+
+// Register reactive elements
+window.addEventListener('DOMContentLoaded', () => {
+  // Setup dynamic classes
+  document.querySelectorAll('[data-dynamic-class]').forEach(el => {
+    const classMap = JSON.parse(el.getAttribute('data-dynamic-class'));
+    const updateClasses = () => {
+      Object.entries(classMap).forEach(([className, condition]) => {
+        if (state[condition]) {
+          el.classList.add(className);
+        } else {
+          el.classList.remove(className);
+        }
+      });
+    };
+    updateClasses();
+    Object.keys(classMap).forEach(className => {
+      const condition = classMap[className];
+      Frobo.addWatcher(condition, updateClasses);
+    });
+  });
+  
+  // Setup text element watchers
+  document.querySelectorAll('[data-vars]').forEach(el => {
+    const vars = el.getAttribute('data-vars').split(',');
+    vars.forEach(varName => {
+      // For nested properties, watch the root property
+      const rootProp = varName.includes('.') ? varName.split('.')[0] : varName;
+      Frobo.watch(rootProp, el);
+    });
+    // Initial update
+    if (vars.length > 0) Frobo.updateDOM(vars[0]);
+  });
+
+  // Setup conditional rendering
+  Frobo.setupConditionals = function() {
+    // Group conditional blocks by their base ID
+    const conditionalGroups = new Map();
+    
+    document.querySelectorAll('[data-condition]').forEach(el => {
+      const id = el.id;
+      let baseId;
+      
+      if (id.endsWith('-if')) {
+        baseId = id.replace('-if', '');
+      } else if (id.includes('-elseif-')) {
+        baseId = id.substring(0, id.indexOf('-elseif-'));
+      } else {
+        return;
+      }
+      
+      if (!conditionalGroups.has(baseId)) {
+        conditionalGroups.set(baseId, []);
+      }
+      conditionalGroups.get(baseId).push(el);
+    });
+    
+    // Setup evaluation for each conditional group
+    conditionalGroups.forEach((blocks, baseId) => {
+      const ifBlock = document.getElementById(baseId + '-if');
+      const elseBlock = document.getElementById(baseId + '-else');
+      
+      // Find all else-if blocks
+      const elseIfBlocks = [];
+      let i = 0;
+      while (true) {
+        const elseIfBlock = document.getElementById(baseId + '-elseif-' + i);
+        if (!elseIfBlock) break;
+        elseIfBlocks.push(elseIfBlock);
+        i++;
+      }
+      
+      const evaluate = () => {
+        try {
+          // Evaluate if condition
+          if (ifBlock) {
+            const ifCondition = ifBlock.getAttribute('data-condition');
+            const ifResult = eval(ifCondition);
+            
+            if (ifResult) {
+              ifBlock.style.display = 'block';
+              elseIfBlocks.forEach(b => b.style.display = 'none');
+              if (elseBlock) elseBlock.style.display = 'none';
+              return;
+            }
+            ifBlock.style.display = 'none';
+          }
+          
+          // Evaluate else-if conditions in order
+          for (let j = 0; j < elseIfBlocks.length; j++) {
+            const elseIfBlock = elseIfBlocks[j];
+            const elseIfCondition = elseIfBlock.getAttribute('data-condition');
+            const elseIfResult = eval(elseIfCondition);
+            
+            if (elseIfResult) {
+              elseIfBlock.style.display = 'block';
+              // Hide all other else-if blocks and else block
+              for (let k = 0; k < elseIfBlocks.length; k++) {
+                if (k !== j) elseIfBlocks[k].style.display = 'none';
+              }
+              if (elseBlock) elseBlock.style.display = 'none';
+              return;
+            }
+            elseIfBlock.style.display = 'none';
+          }
+          
+          // If no conditions matched, show else block
+          if (elseBlock) {
+            elseBlock.style.display = 'block';
+          }
+        } catch(e) { console.error('Condition error:', e); }
+      };
+      
+      evaluate();
+      Frobo.conditionals = Frobo.conditionals || [];
+      Frobo.conditionals.push(evaluate);
+    });
+  };
+  
+  Frobo.setupConditionals();
+  
+  // Setup input and textarea binding
+  document.querySelectorAll('input[data-bind], textarea[data-bind]').forEach(input => {
+    const stateKey = input.getAttribute('data-bind');
+    const onChange = input.getAttribute('data-onchange');
+    
+    // Set initial value
+    if (state[stateKey] !== undefined) {
+      input.value = state[stateKey];
+    }
+    
+    // Listen for changes
+    input.addEventListener('input', (e) => {
+      state[stateKey] = e.target.value;
+      if (onChange && typeof window[onChange] === 'function') {
+        window[onChange](e.target.value);
+      }
+    });
+    
+    // Update input when state changes
+    const originalUpdate = Frobo.updateDOM;
+    Frobo.updateDOM = function(key) {
+      originalUpdate.call(this, key);
+      if (key === stateKey && input.value !== String(state[stateKey])) {
+        input.value = state[stateKey];
+      }
+    };
+  });
+  
+  // Setup loop rendering
+  Frobo.renderLoops = function() {
+    document.querySelectorAll('[data-loop]').forEach(container => {
+      const arrayName = container.getAttribute('data-loop');
+      const itemName = container.getAttribute('data-item');
+      const templateId = container.id + '-template';
+      const template = document.getElementById(templateId);
+      
+      if (!template || !state[arrayName]) return;
+      
+      container.innerHTML = '';
+      const array = state[arrayName];
+      
+      if (Array.isArray(array)) {
+        array.forEach((item, index) => {
+          const clone = template.content.cloneNode(true);
+          const div = document.createElement('div');
+          div.appendChild(clone);
+          let html = div.innerHTML;
+          html = html.replace(/\{\{LOOP_ITEM\}\}/g, item);
+          container.innerHTML += html;
+        });
+      }
+    });
+  };
+  
+  Frobo.renderLoops();
+});
+
+console.log("Frobo app loaded!");
+  </script>
+</body>
+</html>

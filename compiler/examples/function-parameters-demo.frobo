@@ -1,0 +1,64 @@
+component Calculator {
+  state result = 0
+  state history = ""
+  
+  heading "Advanced Calculator"
+  text "Result: {result}"
+  text "Last operation: {history}"
+  
+  row {
+    button "Add 5" onClick=add(5)
+    button "Add 10" onClick=add(10)
+    button "Add 25" onClick=add(25)
+  }
+  
+  row {
+    button "Subtract 3" onClick=subtract(3)
+    button "Subtract 7" onClick=subtract(7)
+  }
+  
+  row {
+    button "Multiply by 2" onClick=multiply(2)
+    button "Multiply by 3" onClick=multiply(3)
+  }
+  
+  row {
+    button "Divide by 2" onClick=divide(2)
+    button "Divide by 4" onClick=divide(4)
+  }
+  
+  row {
+    button "Square" onClick=square()
+    button "Reset" onClick=reset()
+  }
+}
+
+function add(amount) {
+  result = result + amount
+  history = "Added"
+}
+
+function subtract(amount) {
+  result = result - amount
+  history = "Subtracted"
+}
+
+function multiply(factor) {
+  result = result * factor
+  history = "Multiplied"
+}
+
+function divide(divisor) {
+  result = result / divisor
+  history = "Divided"
+}
+
+function square() {
+  result = result * result
+  history = "Squared"
+}
+
+function reset() {
+  result = 0
+  history = "Reset"
+}

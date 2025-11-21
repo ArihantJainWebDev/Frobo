@@ -1,0 +1,31 @@
+component NestedPropertiesDemo {
+  state user = {
+    profile: {
+      firstName: "John",
+      lastName: "Doe",
+      contact: {
+        email: "john.doe@example.com",
+        phone: "555-1234"
+      }
+    },
+    age: 30,
+    isActive: true
+  }
+  
+  computed fullName = user.profile.firstName + " " + user.profile.lastName
+  
+  text "User Profile"
+  text "Name: {user.profile.firstName} {user.profile.lastName}"
+  text "Full Name (computed): {fullName}"
+  text "Email: {user.profile.contact.email}"
+  text "Phone: {user.profile.contact.phone}"
+  text "Age: {user.age}"
+  
+  if user.age > 18 {
+    text "Status: Adult"
+  }
+  
+  if user.isActive {
+    text "Account is active"
+  }
+}

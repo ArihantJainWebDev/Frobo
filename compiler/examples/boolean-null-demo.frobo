@@ -1,0 +1,30 @@
+component BooleanNullDemo {
+  state isLoggedIn = false
+  state user = null
+  state hasPermission = true
+  state data = null
+  
+  computed canAccess = isLoggedIn && hasPermission
+  
+  if user == null {
+    text "Please log in"
+    button "Login" onClick=login
+  } else {
+    text "Welcome back!"
+    
+    if canAccess {
+      text "You have access"
+    } else {
+      text "Access denied"
+    }
+  }
+  
+  if !isLoggedIn {
+    text "Not logged in"
+  }
+}
+
+function login() {
+  isLoggedIn = true
+  user = "John Doe"
+}
