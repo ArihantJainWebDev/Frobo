@@ -305,6 +305,15 @@ export class CodeGenerator {
     html += node.consequent.map(child => this.generateHTML(child)).join('\n');
     html += '</div>';
 
+    // Generate HTML for else-if branches
+    if (node.elseIfBranches && node.elseIfBranches.length > 0) {
+      node.elseIfBranches.forEach((branch, index) => {
+        html += `<div id="${conditionId}-elseif-${index}" data-condition="${this.generateConditionString(branch.condition)}" style="display: none;">`;
+        html += branch.consequent.map(child => this.generateHTML(child)).join('\n');
+        html += '</div>';
+      });
+    }
+
     // Generate HTML for alternate (else body) if it exists
     if (node.alternate && node.alternate.length > 0) {
       html += `<div id="${conditionId}-else" style="display: none;">`;
@@ -364,17 +373,71 @@ export class CodeGenerator {
   }
 
   private generateConditionString(condition: ASTNode): string {
-    if (!condition.children || condition.children.length !== 2) return "";
+    // Handle logical expressions (&&, ||, !)
+    if (condition.type === NodeType.LOGICAL_EXPRESSION) {
+      const operator = condition.operator;
+      
+      // Handle NOT operator (unary)
+      if (operator === '!') {
+        const argument = condition.argument;
+        if (!argument) return "";
+        const argStr = this.generateConditionString(argument);
+        return `!(${argStr})`;
+      }
+      
+      // Handle AND and OR operators (binary)
+      const left = condition.left;
+      const right = condition.right;
+      if (!left || !right) return "";
+      
+      const leftStr = this.generateConditionString(left);
+      const rightStr = this.generateConditionString(right);
+      
+      return `(${leftStr} ${operator} ${rightStr})`;
+    }
+    
+    // Handle comparison conditions
+    if (condition.type === NodeType.CONDITION) {
+      if (!condition.children || condition.children.length !== 2) return "";
 
-    const left = condition.children[0];
-    const right = condition.children[1];
-    const operator = condition.value;
+      const left = condition.children[0];
+      const right = condition.children[1];
+      const operator = condition.value;
 
-    // If it's an identifier (variable), prefix with 'state.'
-    const leftValue = left.type === NodeType.IDENTIFIER ? `state.${left.value}` : left.value;
-    const rightValue = right.type === NodeType.IDENTIFIER ? `state.${right.value}` : right.value;
+      const leftValue = this.generateExpressionString(left);
+      const rightValue = this.generateExpressionString(right);
 
-    return `${leftValue}${operator}${rightValue}`;
+      return `${leftValue}${operator}${rightValue}`;
+    }
+    
+    // Handle simple expressions (identifiers, literals, etc.)
+    return this.generateExpressionString(condition);
+  }
+  
+  private generateExpressionString(node: ASTNode): string {
+    switch (node.type) {
+      case NodeType.IDENTIFIER:
+        return `state.${node.value}`;
+      
+      case NodeType.NUMBER_LITERAL:
+        return String(node.value);
+      
+      case NodeType.STRING_LITERAL:
+        return `"${node.value}"`;
+      
+      case NodeType.BOOLEAN_LITERAL:
+        return String(node.value);
+      
+      case NodeType.NULL_LITERAL:
+        return 'null';
+      
+      case NodeType.MEMBER_EXPRESSION:
+        const object = this.generateExpressionString(node.object!);
+        return `${object}?.${node.property}`;
+      
+      default:
+        return String(node.value || '');
+    }
   }
 
   private generateCSS(): string {
@@ -791,17 +854,80 @@ export class CodeGenerator {
           // Add conditional rendering setup
           js += `\n  // Setup conditional rendering\n`;
           js += `  Frobo.setupConditionals = function() {\n`;
+          js += `    // Group conditional blocks by their base ID\n`;
+          js += `    const conditionalGroups = new Map();\n`;
+          js += `    \n`;
           js += `    document.querySelectorAll('[data-condition]').forEach(el => {\n`;
-          js += `      const condition = el.getAttribute('data-condition');\n`;
-          js += `      const condId = el.id.replace('-if', '');\n`;
-          js += `      const ifBlock = document.getElementById(condId + '-if');\n`;
-          js += `      const elseBlock = document.getElementById(condId + '-else');\n`;
+          js += `      const id = el.id;\n`;
+          js += `      let baseId;\n`;
+          js += `      \n`;
+          js += `      if (id.endsWith('-if')) {\n`;
+          js += `        baseId = id.replace('-if', '');\n`;
+          js += `      } else if (id.includes('-elseif-')) {\n`;
+          js += `        baseId = id.substring(0, id.indexOf('-elseif-'));\n`;
+          js += `      } else {\n`;
+          js += `        return;\n`;
+          js += `      }\n`;
+          js += `      \n`;
+          js += `      if (!conditionalGroups.has(baseId)) {\n`;
+          js += `        conditionalGroups.set(baseId, []);\n`;
+          js += `      }\n`;
+          js += `      conditionalGroups.get(baseId).push(el);\n`;
+          js += `    });\n`;
+          js += `    \n`;
+          js += `    // Setup evaluation for each conditional group\n`;
+          js += `    conditionalGroups.forEach((blocks, baseId) => {\n`;
+          js += `      const ifBlock = document.getElementById(baseId + '-if');\n`;
+          js += `      const elseBlock = document.getElementById(baseId + '-else');\n`;
+          js += `      \n`;
+          js += `      // Find all else-if blocks\n`;
+          js += `      const elseIfBlocks = [];\n`;
+          js += `      let i = 0;\n`;
+          js += `      while (true) {\n`;
+          js += `        const elseIfBlock = document.getElementById(baseId + '-elseif-' + i);\n`;
+          js += `        if (!elseIfBlock) break;\n`;
+          js += `        elseIfBlocks.push(elseIfBlock);\n`;
+          js += `        i++;\n`;
+          js += `      }\n`;
           js += `      \n`;
           js += `      const evaluate = () => {\n`;
           js += `        try {\n`;
-          js += `          const result = eval(condition);\n`;
-          js += `          if (ifBlock) ifBlock.style.display = result ? 'block' : 'none';\n`;
-          js += `          if (elseBlock) elseBlock.style.display = result ? 'none' : 'block';\n`;
+          js += `          // Evaluate if condition\n`;
+          js += `          if (ifBlock) {\n`;
+          js += `            const ifCondition = ifBlock.getAttribute('data-condition');\n`;
+          js += `            const ifResult = eval(ifCondition);\n`;
+          js += `            \n`;
+          js += `            if (ifResult) {\n`;
+          js += `              ifBlock.style.display = 'block';\n`;
+          js += `              elseIfBlocks.forEach(b => b.style.display = 'none');\n`;
+          js += `              if (elseBlock) elseBlock.style.display = 'none';\n`;
+          js += `              return;\n`;
+          js += `            }\n`;
+          js += `            ifBlock.style.display = 'none';\n`;
+          js += `          }\n`;
+          js += `          \n`;
+          js += `          // Evaluate else-if conditions in order\n`;
+          js += `          for (let j = 0; j < elseIfBlocks.length; j++) {\n`;
+          js += `            const elseIfBlock = elseIfBlocks[j];\n`;
+          js += `            const elseIfCondition = elseIfBlock.getAttribute('data-condition');\n`;
+          js += `            const elseIfResult = eval(elseIfCondition);\n`;
+          js += `            \n`;
+          js += `            if (elseIfResult) {\n`;
+          js += `              elseIfBlock.style.display = 'block';\n`;
+          js += `              // Hide all other else-if blocks and else block\n`;
+          js += `              for (let k = 0; k < elseIfBlocks.length; k++) {\n`;
+          js += `                if (k !== j) elseIfBlocks[k].style.display = 'none';\n`;
+          js += `              }\n`;
+          js += `              if (elseBlock) elseBlock.style.display = 'none';\n`;
+          js += `              return;\n`;
+          js += `            }\n`;
+          js += `            elseIfBlock.style.display = 'none';\n`;
+          js += `          }\n`;
+          js += `          \n`;
+          js += `          // If no conditions matched, show else block\n`;
+          js += `          if (elseBlock) {\n`;
+          js += `            elseBlock.style.display = 'block';\n`;
+          js += `          }\n`;
           js += `        } catch(e) { console.error('Condition error:', e); }\n`;
           js += `      };\n`;
           js += `      \n`;
